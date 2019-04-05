@@ -72,7 +72,7 @@ defmodule Airbrake.PayloadTest do
 
   test "it reports the notifier" do
     assert %{name: "Airbrake Elixir",
-             url: "https://github.com/romul/airbrake-elixir",
+             url: _,
              version: _} = get_payload().notifier
   end
 

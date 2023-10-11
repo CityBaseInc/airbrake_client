@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 # These settings can be used on the iex console.
 config :airbrake_client,

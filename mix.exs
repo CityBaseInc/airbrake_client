@@ -5,7 +5,7 @@ defmodule Airbrake.Mixfile do
     [
       app: :airbrake_client,
       version: "0.11.0",
-      elixir: "~> 1.7",
+      elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),
       aliases: aliases(),

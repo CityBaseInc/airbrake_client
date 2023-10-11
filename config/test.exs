@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 # Do NOT set :host here so that default host in Airbrake.Worker can be tested.
 config :airbrake_client,

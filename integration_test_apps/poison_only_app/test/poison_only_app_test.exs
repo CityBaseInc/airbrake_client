@@ -18,7 +18,7 @@ defmodule PoisonOnlyAppTest do
 
       stacktrace = [
         {Harbour, :cats, [3], []},
-        {:timer, :tc, 1, [file: 'timer.erl', line: 166]}
+        {:timer, :tc, 1, [file: ~c"timer.erl", line: 166]}
       ]
 
       assert %Payload{} = payload = Payload.new(exception, stacktrace)
@@ -55,7 +55,7 @@ defmodule PoisonOnlyAppTest do
 
       stacktrace = [
         {Harbour, :cats, [3], []},
-        {:timer, :tc, 1, [file: 'timer.erl', line: 166]}
+        {:timer, :tc, 1, [file: ~c"timer.erl", line: 166]}
       ]
 
       context = %{foo: 5}

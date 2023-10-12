@@ -64,7 +64,7 @@ defmodule Airbrake.Mixfile do
       {:dialyxir, "~> 1.3.0", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.30", only: [:dev, :test]},
       {:excoveralls, "~> 0.18", only: :test},
-      {:httpoison, "~> 0.9 or ~> 1.0"},
+      {:httpoison, "~> 1.0 or ~> 2.0"},
       {:jason, ">= 1.0.0", optional: true},
       {:mox, "~> 1.1", only: :test},
       {:poison, ">= 2.0.0", optional: true},

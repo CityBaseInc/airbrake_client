@@ -7,7 +7,7 @@ on:
 
 jobs:
   version_tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
       matrix:
@@ -30,7 +30,7 @@ jobs:
           - elixir: '1.12'
             otp: '24'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
@@ -45,7 +45,7 @@ jobs:
       run:
         working-directory: integration_test_apps/poison_only_app
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
           otp-version: '26'
@@ -60,14 +60,13 @@ jobs:
       run:
         working-directory: integration_test_apps/jason_only_app
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
           otp-version: '26'
           elixir-version: '1.15'
       - run: mix deps.get
       - run: mix test
-
 
   all_tests:
     runs-on: ubuntu-20.04
@@ -79,7 +78,7 @@ jobs:
           - elixir: '1.15.6'
             otp: '26.1.1'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup elixir
         uses: erlef/setup-beam@v1
         with:
@@ -90,7 +89,7 @@ jobs:
         run: mix deps.get
 
       - name: Cache Elixir build
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: _build
           key: elixir-build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-${{ hashFiles('lib/**/*.ex', 'config/*.exs', 'mix.exs') }}

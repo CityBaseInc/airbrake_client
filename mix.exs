@@ -79,6 +79,7 @@ defmodule Airbrake.Mixfile do
         "compile --force --warnings-as-errors",
         "credo --strict",
         "format --check-formatted",
+        "docs --output test/doc",
         "coveralls --raise",
         "dialyzer"
       ]

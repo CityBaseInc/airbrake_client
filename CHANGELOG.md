@@ -1,5 +1,17 @@
 # Changelog for v0.x
 
+## v1.0.0 (2023-10-12)
+
+### Enhancements
+
+  * [Airbrake.Worker] use only `Application.compile_env/3`, drop use of `Application.get_env/3`.
+  * Formatting changes.
+  * Allow version 1.X or 2.X for `httpoison`; drop support for 0.9.
+
+### Breaking Change
+
+  * Drop support for Elixir <1.10.  Use must use earlier version to compile with earlier versions of Elixir.
+
 ## v0.11.0 (2022-12-05)
 
   * [Airbrake.Plug] Exposes `handle_errors/2` as private

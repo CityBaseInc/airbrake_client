@@ -6,7 +6,7 @@ on:
       - '*'
 
 jobs:
-  version_tests:
+  old_otp_version_tests:
     runs-on: ubuntu-20.04
     name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
@@ -14,29 +14,72 @@ jobs:
         include:
           - elixir: '1.10'
             otp: '22'
-          - elixir: '1.11'
-            otp: '22'
-          - elixir: '1.12'
-            otp: '22'
           - elixir: '1.10'
             otp: '23'
           - elixir: '1.11'
-            otp: '23'
-          - elixir: '1.12'
-            otp: '23'
-          # SKIP: Elixir 1.10, OTP 24
+            otp: '22'
           - elixir: '1.11'
-            otp: '24'
+            otp: '23'
           - elixir: '1.12'
-            otp: '24'
+            otp: '22'
+          - elixir: '1.12'
+            otp: '23'
+          - elixir: '1.13'
+            otp: '22'
+          - elixir: '1.13'
+            otp: '23'
+          - elixir: '1.14'
+            otp: '23'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
       - run: mix deps.get
       - run: mix test
+
+  version_tests:
+    runs-on: ubuntu-latest
+    name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    strategy:
+      matrix:
+        include:
+          - elixir: '1.11'
+            otp: '24'
+          - elixir: '1.12'
+            otp: '24'
+          - elixir: '1.13'
+            otp: '24'
+          - elixir: '1.13'
+            otp: '25'
+          - elixir: '1.14'
+            otp: '24'
+          - elixir: '1.14'
+            otp: '25'
+          - elixir: '1.14'
+            otp: '26'
+          - elixir: '1.15'
+            otp: '24'
+          - elixir: '1.15'
+            otp: '25'
+          - elixir: '1.15'
+            otp: '26'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{matrix.otp}}
+          elixir-version: ${{matrix.elixir}}
+      - run: mix deps.get
+      - run: mix test
+
+  all_versions_tests:
+    name: "All Versions Tests"
+    needs: [old_otp_version_tests, version_tests]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Elixir tests for many versions of Elixir and OTP have successfully completed."
 
   poison_only_test:
     runs-on: ubuntu-20.04
@@ -45,11 +88,11 @@ jobs:
       run:
         working-directory: integration_test_apps/poison_only_app
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '23'
-          elixir-version: '1.11'
+          otp-version: '26'
+          elixir-version: '1.15'
       - run: mix deps.get
       - run: mix test
 
@@ -60,26 +103,25 @@ jobs:
       run:
         working-directory: integration_test_apps/jason_only_app
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '23'
-          elixir-version: '1.11'
+          otp-version: '26'
+          elixir-version: '1.15'
       - run: mix deps.get
       - run: mix test
 
-
   all_tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     env:
       MIX_ENV: test
     strategy:
       matrix:
         include:
-          - elixir: '1.11.4'
-            otp: '23.3.1'
+          - elixir: '1.15.6'
+            otp: '26.1.1'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup elixir
         uses: erlef/setup-beam@v1
         with:
@@ -90,13 +132,10 @@ jobs:
         run: mix deps.get
 
       - name: Cache Elixir build
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: _build
-          key: elixir-build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-${{ hashFiles('lib/**/*.ex', 'config/*.exs', 'mix.exs') }}
-          restore-keys: |
-            elixir-build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-
-            elixir-build-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-
+          key: elixir-build-v1-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-${{ hashFiles('lib/**/*.ex', 'config/*.exs', 'mix.exs') }}
 
       - name: Compile Deps
         run: mix deps.compile
@@ -118,3 +157,10 @@ jobs:
 
       - name: Run Dialyzer
         run: mix dialyzer --list-unused-filters
+
+  required_all_tests:
+    name: "Complete Elixir Tests"
+    needs: [all_tests]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Elixir tests and static analyses completed succcessfully."

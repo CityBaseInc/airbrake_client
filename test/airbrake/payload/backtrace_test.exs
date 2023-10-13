@@ -8,13 +8,13 @@ defmodule Airbrake.Payload.BacktraceTests do
     test "turns a whole stacktrace into a backtrace" do
       stacktrace = [
         {Harbour, :cats, [3], []},
-        {:erl_eval, :do_apply, 6, [file: 'erl_eval.erl', line: 680]},
-        {:erl_eval, :try_clauses, 8, [file: 'erl_eval.erl', line: 914]},
-        {:elixir, :recur_eval, 3, [file: 'src/elixir.erl', line: 280]},
-        {:elixir, :eval_forms, 3, [file: 'src/elixir.erl', line: 265]},
-        {IEx.Evaluator, :handle_eval, 5, [file: 'lib/iex/evaluator.ex', line: 261]},
-        {IEx.Evaluator, :do_eval, 3, [file: 'lib/iex/evaluator.ex', line: 242]},
-        {IEx.Evaluator, :eval, 3, [file: 'lib/iex/evaluator.ex', line: 220]}
+        {:erl_eval, :do_apply, 6, [file: ~c"erl_eval.erl", line: 680]},
+        {:erl_eval, :try_clauses, 8, [file: ~c"erl_eval.erl", line: 914]},
+        {:elixir, :recur_eval, 3, [file: ~c"src/elixir.erl", line: 280]},
+        {:elixir, :eval_forms, 3, [file: ~c"src/elixir.erl", line: 265]},
+        {IEx.Evaluator, :handle_eval, 5, [file: ~c"lib/iex/evaluator.ex", line: 261]},
+        {IEx.Evaluator, :do_eval, 3, [file: ~c"lib/iex/evaluator.ex", line: 242]},
+        {IEx.Evaluator, :eval, 3, [file: ~c"lib/iex/evaluator.ex", line: 220]}
       ]
 
       assert Backtrace.from_stacktrace(stacktrace) == [

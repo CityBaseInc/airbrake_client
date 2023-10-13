@@ -13,7 +13,7 @@ defmodule Airbrake.WorkerTest do
 
     {exception, stacktrace} =
       try do
-        Enum.join(3, 'million')
+        Enum.join(3, ~c"million")
       rescue
         exception -> {exception, __STACKTRACE__}
       end

@@ -4,8 +4,8 @@ defmodule Airbrake.Mixfile do
   def project do
     [
       app: :airbrake_client,
-      version: "0.11.0",
-      elixir: "~> 1.7",
+      version: "1.0.0",
+      elixir: "~> 1.10",
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),
       aliases: aliases(),
@@ -58,15 +58,17 @@ defmodule Airbrake.Mixfile do
 
   defp deps do
     [
-      {:credo, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.19", only: [:dev, :test]},
-      {:excoveralls, "~> 0.12.0", only: :test},
-      {:httpoison, "~> 0.9 or ~> 1.0"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      # 1.4 is not compilable with Elixir <1.12.
+      # For test CI, we just need to _compile_ dialyxir on earlier versions.
+      {:dialyxir, "~> 1.3.0", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.30", only: [:dev, :test]},
+      {:excoveralls, "~> 0.18", only: :test},
+      {:httpoison, "~> 1.0 or ~> 2.0"},
       {:jason, ">= 1.0.0", optional: true},
-      {:mox, "~> 0.5", only: :test},
+      {:mox, "~> 1.1", only: :test},
       {:poison, ">= 2.0.0", optional: true},
-      {:stream_data, "~> 0.5", only: [:dev, :test]}
+      {:stream_data, "~> 0.6", only: [:dev, :test]}
     ]
   end
 
@@ -77,6 +79,7 @@ defmodule Airbrake.Mixfile do
         "compile --force --warnings-as-errors",
         "credo --strict",
         "format --check-formatted",
+        "docs --output test/doc",
         "coveralls --raise",
         "dialyzer"
       ]

@@ -6,47 +6,12 @@ on:
       - '*'
 
 jobs:
-  old_otp_version_tests:
-    runs-on: ubuntu-20.04
-    name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
-    strategy:
-      matrix:
-        include:
-          - elixir: '1.10'
-            otp: '22'
-          - elixir: '1.10'
-            otp: '23'
-          - elixir: '1.11'
-            otp: '22'
-          - elixir: '1.11'
-            otp: '23'
-          - elixir: '1.12'
-            otp: '22'
-          - elixir: '1.12'
-            otp: '23'
-          - elixir: '1.13'
-            otp: '22'
-          - elixir: '1.13'
-            otp: '23'
-          - elixir: '1.14'
-            otp: '23'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: ${{matrix.otp}}
-          elixir-version: ${{matrix.elixir}}
-      - run: mix deps.get
-      - run: mix test
-
   version_tests:
     runs-on: ubuntu-latest
     name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
     strategy:
       matrix:
         include:
-          - elixir: '1.11'
-            otp: '24'
           - elixir: '1.12'
             otp: '24'
           - elixir: '1.13'
@@ -64,6 +29,12 @@ jobs:
           - elixir: '1.15'
             otp: '25'
           - elixir: '1.15'
+            otp: '26'
+          - elixir: '1.16'
+            otp: '24'
+          - elixir: '1.16'
+            otp: '25'
+          - elixir: '1.16'
             otp: '26'
     steps:
       - uses: actions/checkout@v4
@@ -76,7 +47,7 @@ jobs:
 
   all_versions_tests:
     name: "All Versions Tests"
-    needs: [old_otp_version_tests, version_tests]
+    needs: version_tests
     runs-on: ubuntu-latest
     steps:
       - run: echo "Elixir tests for many versions of Elixir and OTP have successfully completed."

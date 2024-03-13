@@ -1,5 +1,16 @@
 # Changelog for v0.x
 
+## v2.0.0 (2024-03-11)
+
+### Enhancements
+
+  * [Airbrake.Utils] Add `detuple/1` to support CBRelay in parsing Airbrake params before transmitting
+  * [Airbrake.Utils] Add `destruct/1` to support CBRelay in parsing Airbrake params before transmitting
+
+### Breaking Change
+
+  * Drop support for Elixir <1.12
+    
 ## v1.0.0 (2023-10-12)
 
 ### Enhancements

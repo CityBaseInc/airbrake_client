@@ -40,7 +40,7 @@ defmodule PoisonOnlyAppTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "1.0.0"
+                 "version" => "2.0.0"
                },
                "params" => nil,
                "session" => nil
@@ -89,7 +89,7 @@ defmodule PoisonOnlyAppTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "1.0.0"
+                 "version" => "2.0.0"
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}

@@ -91,6 +91,6 @@ defmodule Airbrake.Payload do
   end
 
   defp filter(map, attributes_key) do
-    Utils.filter(map, Airbrake.Worker.get_env(attributes_key))
+    Utils.filter(map, Airbrake.Worker.get_config(attributes_key))
   end
 end

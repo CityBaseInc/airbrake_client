@@ -108,7 +108,7 @@ defmodule Airbrake.Worker do
   end
 
   defp build_options(current_options) do
-    case get_env(:options) do
+    case get_config(:options) do
       {mod, fun, 1} ->
         apply(mod, fun, [current_options])
 
@@ -126,7 +126,7 @@ defmodule Airbrake.Worker do
   end
 
   defp ignore?(type: type, message: message) do
-    ignore?(get_env(:ignore), type, message)
+    ignore?(get_config(:ignore), type, message)
   end
 
   defp ignore?(nil, _type, _message), do: false
@@ -139,20 +139,20 @@ defmodule Airbrake.Worker do
 
   defp notify_url do
     Path.join([
-      get_env(:host, @default_host),
+      get_config(:host, @default_host),
       "api/v3/projects",
-      :project_id |> get_env() |> to_string(),
-      "notices?key=#{get_env(:api_key)}"
+      :project_id |> get_config() |> to_string(),
+      "notices?key=#{get_config(:api_key)}"
     ])
   end
 
-  def get_env(key, default \\ nil) do
+  def get_config(key, default \\ nil) do
     :airbrake_client
     |> Application.get_env(key, default)
-    |> process_env()
+    |> process_config()
   end
 
-  defp process_env({:system, key, default}), do: System.get_env(key) || default
-  defp process_env({:system, key}), do: System.get_env(key)
-  defp process_env(value), do: value
+  defp process_config({:system, key, default}), do: System.get_env(key) || default
+  defp process_config({:system, key}), do: System.get_env(key)
+  defp process_config(value), do: value
 end

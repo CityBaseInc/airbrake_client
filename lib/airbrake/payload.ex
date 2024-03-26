@@ -28,34 +28,25 @@ defmodule Airbrake.Payload do
   end
 
   def new(exception, stacktrace, options) when is_list(exception) do
-    %__MODULE__{}
-    |> add_error(
-      exception,
-      stacktrace,
-      Keyword.get(options, :context),
-      Keyword.get(options, :env),
-      Keyword.get(options, :params),
-      Keyword.get(options, :session)
-    )
+    %__MODULE__{
+      errors: [build_error(exception, stacktrace)],
+      context: Map.merge(%{environment: env(), hostname: hostname()}, get_option(options, :context) || %{}),
+      environment: options |> get_option(:env) |> filter_environment(),
+      params: options |> get_option(:params) |> filter_parameters(),
+      session: get_option(options, :session)
+    }
   end
 
-  defp add_error(payload, exception, stacktrace, context, env, params, session) do
-    payload
-    |> add_exception_info(exception, stacktrace)
-    |> add_context(context)
-    |> add_env(env)
-    |> add_params(params)
-    |> add_session(session)
+  defp get_option(options, key) do
+    Keyword.get(options, key)
   end
 
-  defp add_exception_info(payload, exception, stacktrace) do
-    error = %{
+  defp build_error(exception, stacktrace) do
+    %{
       type: exception[:type],
       message: exception[:message],
       backtrace: Backtrace.from_stacktrace(stacktrace)
     }
-
-    Map.put(payload, :errors, [error])
   end
 
   defp env do
@@ -72,21 +63,11 @@ defmodule Airbrake.Payload do
     System.get_env("HOST") || to_string(elem(:inet.gethostname(), 1))
   end
 
-  defp add_context(payload, context) do
-    context = Map.merge(%{environment: env(), hostname: hostname()}, context || %{})
-    Map.put(payload, :context, context)
-  end
-
-  defp add_env(payload, nil), do: payload
-  defp add_env(payload, env), do: Map.put(payload, :environment, filter_environment(env))
-
-  defp add_params(payload, nil), do: payload
-  defp add_params(payload, params), do: Map.put(payload, :params, filter_parameters(params))
-
-  defp add_session(payload, nil), do: payload
-  defp add_session(payload, session), do: Map.put(payload, :session, session)
-
   defp filter_parameters(params), do: filter(params, :filter_parameters)
+
+  defp filter_environment(nil) do
+    nil
+  end
 
   defp filter_environment(env) do
     if Map.has_key?(env, "headers"),

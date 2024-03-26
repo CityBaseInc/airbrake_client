@@ -30,15 +30,11 @@ defmodule Airbrake.Payload do
   def new(exception, stacktrace, options) when is_list(exception) do
     %__MODULE__{
       errors: [build_error(exception, stacktrace)],
-      context: Map.merge(%{environment: env(), hostname: hostname()}, get_option(options, :context) || %{}),
-      environment: options |> get_option(:env) |> filter_environment(),
-      params: options |> get_option(:params) |> filter_parameters(),
-      session: get_option(options, :session)
+      context: build(:context, options),
+      environment: build(:environment, options),
+      params: build(:params, options),
+      session: build(:session, options)
     }
-  end
-
-  defp get_option(options, key) do
-    Keyword.get(options, key)
   end
 
   defp build_error(exception, stacktrace) do
@@ -47,6 +43,25 @@ defmodule Airbrake.Payload do
       message: exception[:message],
       backtrace: Backtrace.from_stacktrace(stacktrace)
     }
+  end
+
+  defp build(:context, options) do
+    Map.merge(
+      %{environment: env(), hostname: hostname()},
+      Keyword.get(options, :context, %{})
+    )
+  end
+
+  defp build(:environment, options) do
+    options |> Keyword.get(:env) |> filter_environment()
+  end
+
+  defp build(:params, options) do
+    options |> Keyword.get(:params) |> filter_parameters()
+  end
+
+  defp build(key, options) do
+    Keyword.get(options, key)
   end
 
   defp env do

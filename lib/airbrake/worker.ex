@@ -7,6 +7,8 @@ defmodule Airbrake.Worker do
     defstruct refs: %{}, last_exception: nil
   end
 
+  alias Airbrake.Config
+
   @name __MODULE__
   @request_headers [{"Content-Type", "application/json"}]
   @default_host "https://api.airbrake.io"
@@ -108,7 +110,7 @@ defmodule Airbrake.Worker do
   end
 
   defp build_options(current_options) do
-    case get_config(:options) do
+    case Config.get(:options) do
       {mod, fun, 1} ->
         apply(mod, fun, [current_options])
 
@@ -126,7 +128,7 @@ defmodule Airbrake.Worker do
   end
 
   defp ignore?(type: type, message: message) do
-    ignore?(get_config(:ignore), type, message)
+    ignore?(Config.get(:ignore), type, message)
   end
 
   defp ignore?(nil, _type, _message), do: false
@@ -139,20 +141,14 @@ defmodule Airbrake.Worker do
 
   defp notify_url do
     Path.join([
-      get_config(:host, @default_host),
+      Config.get(:host, @default_host),
       "api/v3/projects",
-      :project_id |> get_config() |> to_string(),
-      "notices?key=#{get_config(:api_key)}"
+      :project_id |> Config.get() |> to_string(),
+      "notices?key=#{Config.get(:api_key)}"
     ])
   end
 
-  def get_config(key, default \\ nil) do
-    :airbrake_client
-    |> Application.get_env(key, default)
-    |> process_config()
-  end
-
-  defp process_config({:system, key, default}), do: System.get_env(key) || default
-  defp process_config({:system, key}), do: System.get_env(key)
-  defp process_config(value), do: value
+  @deprecated "Use Airbrake.Config.get/2 instead."
+  def get_env(key, default \\ nil),
+    do: Config.get(key, default)
 end

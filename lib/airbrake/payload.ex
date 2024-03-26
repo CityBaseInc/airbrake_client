@@ -1,6 +1,8 @@
 defmodule Airbrake.Payload do
   @moduledoc false
 
+  alias Airbrake.Config
+
   @notifier_info %{
     name: "Airbrake Client",
     version: Airbrake.Mixfile.project()[:version],
@@ -47,7 +49,7 @@ defmodule Airbrake.Payload do
 
   defp build(:context, options) do
     Map.merge(
-      %{environment: env(), hostname: hostname()},
+      %{environment: Config.env(), hostname: Config.hostname()},
       Keyword.get(options, :context, %{})
     )
   end
@@ -64,20 +66,6 @@ defmodule Airbrake.Payload do
     Keyword.get(options, key)
   end
 
-  defp env do
-    case Application.get_env(:airbrake_client, :environment) do
-      nil -> hostname()
-      {:system, var} -> System.get_env(var) || hostname()
-      atom_env when is_atom(atom_env) -> to_string(atom_env)
-      str_env when is_binary(str_env) -> str_env
-      fun_env when is_function(fun_env) -> fun_env.()
-    end
-  end
-
-  def hostname do
-    System.get_env("HOST") || to_string(elem(:inet.gethostname(), 1))
-  end
-
   defp filter_parameters(params), do: filter(params, :filter_parameters)
 
   defp filter_environment(nil) do
@@ -90,7 +78,7 @@ defmodule Airbrake.Payload do
       else: env
   end
 
-  defp filter(map, attributes_key) do
-    Utils.filter(map, Airbrake.Worker.get_config(attributes_key))
+  defp filter(map, config_key) do
+    Utils.filter(map, Config.get(config_key))
   end
 end

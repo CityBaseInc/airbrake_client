@@ -146,18 +146,19 @@ defmodule Airbrake.PayloadTest do
 
     test "sets params when given" do
       params = %{foo: 55, bar: "qux"}
-      assert %Payload{params: ^params} = Payload.new(@exception, @stacktrace, params: params)
+
+      assert %Payload{
+               params: %{"foo" => 55, "bar" => "qux"}
+             } = Payload.new(@exception, @stacktrace, params: params)
     end
 
     test "filters sensitive params" do
-      Application.put_env(:airbrake_client, :filter_parameters, ["password"])
-
+      # "password" is filtered out in `config/test.exs`
+      # Filtering is tested in more depth for `Airbrake.Payload.Builder`.
       params = %{"password" => "top_secret", "x" => "y"}
 
       assert %Payload{params: %{"password" => "[FILTERED]", "x" => "y"}} =
                Payload.new(@exception, @stacktrace, params: params)
-
-      Application.delete_env(:airbrake_client, :filter_parameters)
     end
 
     test "sets session when given" do

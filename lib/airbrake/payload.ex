@@ -1,7 +1,7 @@
 defmodule Airbrake.Payload do
   @moduledoc false
 
-  alias Airbrake.Config
+  alias Airbrake.Payload.Builder
 
   @notifier_info %{
     name: "Airbrake Client",
@@ -20,65 +20,19 @@ defmodule Airbrake.Payload do
             params: nil,
             session: nil
 
-  alias Airbrake.Payload.Backtrace
-  alias Airbrake.Utils
+  def new(exception, stacktrace, opts \\ [])
 
-  def new(exception, stacktrace, options \\ [])
-
-  def new(%{__exception__: true} = exception, stacktrace, options) do
-    new(Airbrake.Worker.exception_info(exception), stacktrace, options)
+  def new(%{__exception__: true} = exception, stacktrace, opts) do
+    new(Airbrake.Worker.exception_info(exception), stacktrace, opts)
   end
 
-  def new(exception, stacktrace, options) when is_list(exception) do
+  def new(exception, stacktrace, opts) when is_list(exception) do
     %__MODULE__{
-      errors: [build_error(exception, stacktrace)],
-      context: build(:context, options),
-      environment: build(:environment, options),
-      params: build(:params, options),
-      session: build(:session, options)
+      errors: [Builder.build_error(exception, stacktrace)],
+      context: Builder.build(:context, opts),
+      environment: Builder.build(:environment, opts),
+      params: Builder.build(:params, opts),
+      session: Builder.build(:session, opts)
     }
-  end
-
-  defp build_error(exception, stacktrace) do
-    %{
-      type: exception[:type],
-      message: exception[:message],
-      backtrace: Backtrace.from_stacktrace(stacktrace)
-    }
-  end
-
-  defp build(:context, options) do
-    Map.merge(
-      %{environment: Config.env(), hostname: Config.hostname()},
-      Keyword.get(options, :context, %{})
-    )
-  end
-
-  defp build(:environment, options) do
-    options |> Keyword.get(:env) |> filter_environment()
-  end
-
-  defp build(:params, options) do
-    options |> Keyword.get(:params) |> filter_parameters()
-  end
-
-  defp build(key, options) do
-    Keyword.get(options, key)
-  end
-
-  defp filter_parameters(params), do: filter(params, :filter_parameters)
-
-  defp filter_environment(nil) do
-    nil
-  end
-
-  defp filter_environment(env) do
-    if Map.has_key?(env, "headers"),
-      do: Map.update!(env, "headers", &filter(&1, :filter_headers)),
-      else: env
-  end
-
-  defp filter(map, config_key) do
-    Utils.filter(map, Config.get(config_key))
   end
 end

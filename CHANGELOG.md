@@ -1,5 +1,13 @@
 # Changelog for v0.x
 
+## v2.1.0 (??????????)
+
+### Enhancements
+
+  * New config option: if `:session` is set to `:include_logger_metadata`, the
+    Logger metadata from `Logger.metadata/0` is added to the `session` field of
+    the report.  (If the option is not set, the metadata is not included.)
+
 ## v2.0.0 (2024-03-11)
 
 ### Enhancements
@@ -10,7 +18,7 @@
 ### Breaking Change
 
   * Drop support for Elixir <1.12
-    
+
 ## v1.0.0 (2023-10-12)
 
 ### Enhancements

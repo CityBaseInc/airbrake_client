@@ -48,11 +48,15 @@ config :airbrake_client,
   environment: Mix.env(),
   filter_parameters: ["password"],
   filter_headers: ["authorization"],
+  session: :include_logger_metadata,
   host: "https://api.airbrake.io" # or your Errbit host
 
 config :logger,
   backends: [{Airbrake.LoggerBackend, :error}, :console]
 ```
+
+Split this config across your `config/*.exs` files (especially the runtime
+setting in `config/runtime.exs`).
 
 Required configuration arguments:
 
@@ -74,6 +78,24 @@ Optional configuration arguments:
     to ignore some or all exceptions.  See examples below.
   * `:options` - (keyword list or function returning keyword list) values that
     are included in all reports to Airbrake.io.  See examples below.
+  * `:session` - can be set to `:include_logger_metadata` to include Logger
+    metadata in the `session` field of the report; omit this option if you do
+    not want Logger metadata.  See below for more information.
+
+### Logger metadata in the `session`
+
+If you set the `:session` config to `:include_logger_metadata`, the Logger
+metadata from the process that invokes `Airbrake.report/2` will be the initial
+session data for the `session` field.  The values passed as `:session` in the
+`options` parameter of `Airbrake.report/2` are _added_ to the session value,
+overwriting any Logger metadata values.
+
+If you do not set the `:session` config, only the `:session` value passed as the
+options to `Airbrake.report/2` will be used for the `session` field in the
+report.
+
+If the `session` turns out to be empty (for whatever reason), it is instead set
+to `nil` (and should not show up in the report).
 
 ### Ignoring some exceptions
 

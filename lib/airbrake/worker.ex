@@ -28,7 +28,13 @@ defmodule Airbrake.Worker do
 
   def report([type: _, message: _] = exception, options) when is_list(options) do
     stacktrace = options[:stacktrace] || get_stacktrace()
-    GenServer.cast(@name, {:report, exception, stacktrace, Keyword.delete(options, :stacktrace)})
+
+    options =
+      options
+      |> Keyword.delete(:stacktrace)
+      |> maybe_add_logger_metadata()
+
+    GenServer.cast(@name, {:report, exception, stacktrace, options})
   end
 
   def report(_, _) do
@@ -135,6 +141,12 @@ defmodule Airbrake.Worker do
   defp ignore?(:all, _type, _message), do: true
   defp ignore?(fun, type, message) when is_function(fun), do: fun.(type, message)
   defp ignore?(types, type, _message), do: MapSet.member?(types, type)
+
+  defp maybe_add_logger_metadata(opts) do
+    if Config.get(:session) == :include_logger_metadata,
+      do: Keyword.put(opts, :logger_metadata, Logger.metadata()),
+      else: opts
+  end
 
   defp process_name(pid, pid), do: "Process [#{inspect(pid)}]"
   defp process_name(pname, pid), do: "#{inspect(pname)} [#{inspect(pid)}]"

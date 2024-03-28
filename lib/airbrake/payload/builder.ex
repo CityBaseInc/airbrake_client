@@ -41,9 +41,19 @@ defmodule Airbrake.Payload.Builder do
   end
 
   def build(:session, opts) do
-    if Keyword.has_key?(opts, :session),
-      do: opts |> Keyword.get(:session) |> Enum.into(%{}),
-      else: nil
+    config = get_config(opts)
+
+    logger_metadata =
+      if config.get(:session) == :include_logger_metadata,
+        do: Keyword.get(opts, :logger_metadata, []),
+        else: []
+
+    opts_session = opts |> Keyword.get(:session, %{}) |> Enum.into(%{})
+    full_session = logger_metadata |> Enum.into(%{}) |> Map.merge(opts_session)
+
+    if full_session == %{},
+      do: nil,
+      else: full_session
   end
 
   def filter_parameters(params, opts) do

@@ -197,21 +197,82 @@ defmodule Airbrake.Payload.BuilderTest do
     end
   end
 
-  describe "build/1 :session" do
-    test "nil by default" do
-      opts = []
+  describe "build/1 :session and Logger metadata" do
+    test "nil if logger metadata is empty and :session not set" do
+      session_includes_metadata()
 
-      assert is_nil(Builder.build(:session, opts))
+      opts = [
+        config: MockConfig,
+        logger_metadata: []
+      ]
+
+      assert Builder.build(:session, opts) == nil
     end
 
-    property "returns value from opts" do
-      check all session <- map_of(string_key(), string(:alphanumeric)) do
+    test "nil if logger metadata is nil and :session not set" do
+      session_includes_metadata()
+
+      opts = [
+        config: MockConfig
+      ]
+
+      assert Builder.build(:session, opts) == nil
+    end
+
+    property "returns :session from opts over logger metadata" do
+      session_includes_metadata()
+
+      check all logger_metadata <- keyword_of(string(:alphanumeric)),
+                session <- map_of(string_key(), string(:alphanumeric)),
+                logger_metadata != [] or session != %{} do
         opts = [
+          config: MockConfig,
+          logger_metadata: logger_metadata,
+          session: session
+        ]
+
+        assert Builder.build(:session, opts) ==
+                 Map.merge(Map.new(logger_metadata), session)
+      end
+    end
+
+    defp session_includes_metadata do
+      stub(MockConfig, :get, fn :session -> :include_logger_metadata end)
+    end
+  end
+
+  describe "build/1 :session WITHOUT Logger metadata" do
+    property "nil if :session not set regardless of Logger metadata" do
+      session_does_not_includes_metadata()
+
+      check all logger_metadata <- keyword_of(string(:alphanumeric)) do
+        opts = [
+          config: MockConfig,
+          logger_metadata: logger_metadata
+        ]
+
+        assert Builder.build(:session, opts) == nil
+      end
+    end
+
+    property "returns :session from opts only" do
+      session_does_not_includes_metadata()
+
+      check all logger_metadata <- keyword_of(string(:alphanumeric)),
+                session <- map_of(string_key(), string(:alphanumeric)),
+                session != %{} do
+        opts = [
+          config: MockConfig,
+          logger_metadata: logger_metadata,
           session: session
         ]
 
         assert Builder.build(:session, opts) == session
       end
+    end
+
+    defp session_does_not_includes_metadata do
+      stub(MockConfig, :get, fn :session -> nil end)
     end
   end
 

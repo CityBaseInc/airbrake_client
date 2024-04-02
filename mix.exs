@@ -4,7 +4,7 @@ defmodule Airbrake.Mixfile do
   def project do
     [
       app: :airbrake_client,
-      version: "2.0.0",
+      version: "2.1.0",
       elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),
@@ -59,9 +59,7 @@ defmodule Airbrake.Mixfile do
   defp deps do
     [
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      # 1.4 is not compilable with Elixir <1.12.
-      # For test CI, we just need to _compile_ dialyxir on earlier versions.
-      {:dialyxir, "~> 1.3.0", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.30", only: [:dev, :test]},
       {:excoveralls, "~> 0.18", only: :test},
       {:httpoison, "~> 1.0 or ~> 2.0"},

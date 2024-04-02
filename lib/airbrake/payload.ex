@@ -1,6 +1,8 @@
 defmodule Airbrake.Payload do
   @moduledoc false
 
+  alias Airbrake.Payload.Builder
+
   @notifier_info %{
     name: "Airbrake Client",
     version: Airbrake.Mixfile.project()[:version],
@@ -18,83 +20,19 @@ defmodule Airbrake.Payload do
             params: nil,
             session: nil
 
-  alias Airbrake.Payload.Backtrace
-  alias Airbrake.Utils
+  def new(exception, stacktrace, opts \\ [])
 
-  def new(exception, stacktrace, options \\ [])
-
-  def new(%{__exception__: true} = exception, stacktrace, options) do
-    new(Airbrake.Worker.exception_info(exception), stacktrace, options)
+  def new(%{__exception__: true} = exception, stacktrace, opts) do
+    new(Airbrake.Worker.exception_info(exception), stacktrace, opts)
   end
 
-  def new(exception, stacktrace, options) when is_list(exception) do
-    %__MODULE__{}
-    |> add_error(
-      exception,
-      stacktrace,
-      Keyword.get(options, :context),
-      Keyword.get(options, :env),
-      Keyword.get(options, :params),
-      Keyword.get(options, :session)
-    )
-  end
-
-  defp add_error(payload, exception, stacktrace, context, env, params, session) do
-    payload
-    |> add_exception_info(exception, stacktrace)
-    |> add_context(context)
-    |> add_env(env)
-    |> add_params(params)
-    |> add_session(session)
-  end
-
-  defp add_exception_info(payload, exception, stacktrace) do
-    error = %{
-      type: exception[:type],
-      message: exception[:message],
-      backtrace: Backtrace.from_stacktrace(stacktrace)
+  def new(exception, stacktrace, opts) when is_list(exception) do
+    %__MODULE__{
+      errors: [Builder.build_error(exception, stacktrace)],
+      context: Builder.build(:context, opts),
+      environment: Builder.build(:environment, opts),
+      params: Builder.build(:params, opts),
+      session: Builder.build(:session, opts)
     }
-
-    Map.put(payload, :errors, [error])
-  end
-
-  defp env do
-    case Application.get_env(:airbrake_client, :environment) do
-      nil -> hostname()
-      {:system, var} -> System.get_env(var) || hostname()
-      atom_env when is_atom(atom_env) -> to_string(atom_env)
-      str_env when is_binary(str_env) -> str_env
-      fun_env when is_function(fun_env) -> fun_env.()
-    end
-  end
-
-  def hostname do
-    System.get_env("HOST") || to_string(elem(:inet.gethostname(), 1))
-  end
-
-  defp add_context(payload, context) do
-    context = Map.merge(%{environment: env(), hostname: hostname()}, context || %{})
-    Map.put(payload, :context, context)
-  end
-
-  defp add_env(payload, nil), do: payload
-  defp add_env(payload, env), do: Map.put(payload, :environment, filter_environment(env))
-
-  defp add_params(payload, nil), do: payload
-  defp add_params(payload, params), do: Map.put(payload, :params, filter_parameters(params))
-
-  defp add_session(payload, nil), do: payload
-  defp add_session(payload, session), do: Map.put(payload, :session, session)
-
-  defp filter_parameters(params), do: filter(params, :filter_parameters)
-
-  defp filter_environment(env) do
-    if Map.has_key?(env, "headers"),
-      do: Map.update!(env, "headers", &filter(&1, :filter_headers)),
-      else: env
-  end
-
-  defp filter(map, attributes_key) do
-    Utils.filter(map, Airbrake.Worker.get_env(attributes_key))
   end
 end

@@ -7,6 +7,8 @@ defmodule Airbrake.Worker do
     defstruct refs: %{}, last_exception: nil
   end
 
+  alias Airbrake.Config
+
   @name __MODULE__
   @request_headers [{"Content-Type", "application/json"}]
   @default_host "https://api.airbrake.io"
@@ -26,7 +28,13 @@ defmodule Airbrake.Worker do
 
   def report([type: _, message: _] = exception, options) when is_list(options) do
     stacktrace = options[:stacktrace] || get_stacktrace()
-    GenServer.cast(@name, {:report, exception, stacktrace, Keyword.delete(options, :stacktrace)})
+
+    options =
+      options
+      |> Keyword.delete(:stacktrace)
+      |> maybe_add_logger_metadata()
+
+    GenServer.cast(@name, {:report, exception, stacktrace, options})
   end
 
   def report(_, _) do
@@ -108,7 +116,7 @@ defmodule Airbrake.Worker do
   end
 
   defp build_options(current_options) do
-    case get_env(:options) do
+    case Config.get(:options) do
       {mod, fun, 1} ->
         apply(mod, fun, [current_options])
 
@@ -126,7 +134,7 @@ defmodule Airbrake.Worker do
   end
 
   defp ignore?(type: type, message: message) do
-    ignore?(get_env(:ignore), type, message)
+    ignore?(Config.get(:ignore), type, message)
   end
 
   defp ignore?(nil, _type, _message), do: false
@@ -134,25 +142,25 @@ defmodule Airbrake.Worker do
   defp ignore?(fun, type, message) when is_function(fun), do: fun.(type, message)
   defp ignore?(types, type, _message), do: MapSet.member?(types, type)
 
+  defp maybe_add_logger_metadata(opts) do
+    if Config.get(:session) == :include_logger_metadata,
+      do: Keyword.put(opts, :logger_metadata, Logger.metadata()),
+      else: opts
+  end
+
   defp process_name(pid, pid), do: "Process [#{inspect(pid)}]"
   defp process_name(pname, pid), do: "#{inspect(pname)} [#{inspect(pid)}]"
 
   defp notify_url do
     Path.join([
-      get_env(:host, @default_host),
+      Config.get(:host, @default_host),
       "api/v3/projects",
-      :project_id |> get_env() |> to_string(),
-      "notices?key=#{get_env(:api_key)}"
+      :project_id |> Config.get() |> to_string(),
+      "notices?key=#{Config.get(:api_key)}"
     ])
   end
 
-  def get_env(key, default \\ nil) do
-    :airbrake_client
-    |> Application.get_env(key, default)
-    |> process_env()
-  end
-
-  defp process_env({:system, key, default}), do: System.get_env(key) || default
-  defp process_env({:system, key}), do: System.get_env(key)
-  defp process_env(value), do: value
+  @deprecated "Use Airbrake.Config.get/2 instead."
+  def get_env(key, default \\ nil),
+    do: Config.get(key, default)
 end

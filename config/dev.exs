@@ -1,8 +1,7 @@
 import Config
 
 # These settings can be used on the iex console.
+# More are set in `config/runtime.exs`.
 config :airbrake_client,
-  api_key: {:system, "AIRBRAKE_API_KEY"},
-  project_id: {:system, "AIRBRAKE_PROJECT_ID"},
-  host: {:system, "AIRBRAKE_HOST", "https://api.airbrake.io"},
+  session: :include_logger_metadata,
   private: [http_adapter: HTTPoison]

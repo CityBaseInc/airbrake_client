@@ -27,7 +27,7 @@ end
 config :airbrake_client,
   api_key: System.get_env("AIRBRAKE_API_KEY"),
   project_id: System.get_env("AIRBRAKE_PROJECT_ID"),
-  environment: System.get_env("KUBERNETES_CLUSTER"),
+  context_environment: System.get_env("KUBERNETES_CLUSTER"),
   filter_parameters: ["password"],
   filter_headers: ["authorization"],
   session: :include_logger_metadata,
@@ -51,9 +51,10 @@ Required configuration arguments:
 
 Optional configuration arguments:
 
-  * `:environment` - (binary or function returning binary) the deployment
-    environment; used to set `notice.context.environment`.  See the "Setting the
-    environment" section below.
+  * `:context_environment` - (binary or function returning binary) the
+    deployment environment; used to set `notice.context.environment`.  See the
+    "Setting the environment in the context" section below.
+    * This was formerly `:environment`, and this can still be used.
   * `:filter_parameters` - (list of strings) filters parameters that may map to
     sensitive data such as passwords and tokens.
   * `:filter_headers` - (list of strings) filters HTTP headers.
@@ -70,7 +71,7 @@ Optional configuration arguments:
   * `:options` - (keyword list or function returning keyword list) values that
     are included in all reports to Airbrake.io.  See examples below.
   * `:production_aliases` - (list of strings) a list of `"production"` aliases.
-    See the "Setting the environment" section below.
+    See the "Setting the environment in the context" section below.
   * `:session` - can be set to `:include_logger_metadata` to include Logger
     metadata in the `session` field of the report; omit this option if you do
     not want Logger metadata.  See below for more information.
@@ -79,18 +80,18 @@ See the ["Create notice
 v3"](https://docs.airbrake.io/docs/devops-tools/api/#create-notice-v3) section
 in the Airbrake API docs to understand some of these options better.
 
-### Setting the environment
+### Setting the environment in the context
 
 The value for `notice.context.environment` when [creating a
 notice](https://docs.airbrake.io/docs/devops-tools/api/#create-notice-v3) can be
-set with the `:environment` config.
+set with the `:context_environment` config.
 
-Often it is easiest to configure `:environment` with some environment variable.
-However,  to get production notifications, the `environment` must be set to
-`"production"` (case independent).  Maybe your environment variable returns the
-value `"prod"`.  Set `:production_aliases` to a list of strings that should be
-converted into `"production"`.  The `config` example above will turn `"prod"`
-into `"production"`.
+Often it is easiest to configure `:context_environment` with some environment
+variable.  However,  to get production notifications, the `environment` must be
+set to `"production"` (case independent).  Maybe your environment variable
+returns the value `"prod"`.  Set `:production_aliases` to a list of strings that
+should be converted into `"production"`.  The `config` example above will turn
+`"prod"` into `"production"`.
 
 ### Logger metadata in the `session`
 

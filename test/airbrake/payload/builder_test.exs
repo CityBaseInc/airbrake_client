@@ -13,23 +13,24 @@ defmodule Airbrake.Payload.BuilderTest do
     property "builds default/initial context using env and hostname from config" do
       opts = [config: MockConfig]
 
-      check all env <- env(),
+      check all context_environment <- context_environment(),
                 hostname <- hostname() do
         MockConfig
-        |> stub(:env, fn -> env end)
+        |> stub(:context_environment, fn -> context_environment end)
         |> stub(:hostname, fn -> hostname end)
 
-        assert Builder.build(:context, opts) == %{environment: env, hostname: hostname}
+        assert Builder.build(:context, opts) ==
+                 %{environment: context_environment, hostname: hostname}
       end
     end
 
     property "can add more context" do
-      check all env <- env(),
+      check all context_environment <- context_environment(),
                 hostname <- hostname(),
                 foo <- one_of([integer(), string(:alphanumeric)]),
                 bar <- one_of([integer(), string(:alphanumeric)]) do
         MockConfig
-        |> stub(:env, fn -> env end)
+        |> stub(:context_environment, fn -> context_environment end)
         |> stub(:hostname, fn -> hostname end)
 
         opts = [
@@ -38,7 +39,7 @@ defmodule Airbrake.Payload.BuilderTest do
         ]
 
         assert Builder.build(:context, opts) == %{
-                 environment: env,
+                 environment: context_environment,
                  hostname: hostname,
                  foo: foo,
                  bar: bar
@@ -47,12 +48,12 @@ defmodule Airbrake.Payload.BuilderTest do
     end
 
     property "can add more context with keyword list" do
-      check all env <- env(),
+      check all context_environment <- context_environment(),
                 hostname <- hostname(),
                 foo <- one_of([integer(), string(:alphanumeric)]),
                 bar <- one_of([integer(), string(:alphanumeric)]) do
         MockConfig
-        |> stub(:env, fn -> env end)
+        |> stub(:context_environment, fn -> context_environment end)
         |> stub(:hostname, fn -> hostname end)
 
         opts = [
@@ -61,7 +62,7 @@ defmodule Airbrake.Payload.BuilderTest do
         ]
 
         assert Builder.build(:context, opts) == %{
-                 environment: env,
+                 environment: context_environment,
                  hostname: hostname,
                  foo: foo,
                  bar: bar
@@ -70,22 +71,22 @@ defmodule Airbrake.Payload.BuilderTest do
     end
 
     property "context in opts overwrites defaults" do
-      check all env <- env(),
+      check all context_environment <- context_environment(),
                 hostname <- hostname(),
-                opts_env <- env(),
+                opts_context_environment <- context_environment(),
                 opts_hostname <- hostname(),
                 foo <- integer() do
         MockConfig
-        |> stub(:env, fn -> env end)
+        |> stub(:context_environment, fn -> context_environment end)
         |> stub(:hostname, fn -> hostname end)
 
         opts = [
           config: MockConfig,
-          context: %{foo: foo, environment: opts_env, hostname: opts_hostname}
+          context: %{foo: foo, environment: opts_context_environment, hostname: opts_hostname}
         ]
 
         assert Builder.build(:context, opts) == %{
-                 environment: opts_env,
+                 environment: opts_context_environment,
                  hostname: opts_hostname,
                  foo: foo
                }

@@ -92,4 +92,16 @@ defmodule Airbrake do
       end) |> Airbrake.monitor
   """
   defdelegate monitor(pid_or_reg_name), to: Airbrake.Worker
+
+  @doc """
+  Recursively turns structs into plain maps.  Use this to clean up data for an
+  Airbrake report.
+  """
+  defdelegate destruct(value), to: Airbrake.Utils
+
+  @doc """
+  Recursively turns tuples into lists.  Use this to clean up data for an
+  Airbrake report.
+  """
+  defdelegate detuple(value), to: Airbrake.Utils
 end

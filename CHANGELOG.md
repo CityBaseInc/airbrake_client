@@ -1,5 +1,15 @@
 # Changelog for v0.x
 
+## IN PROGRESS
+
+### Enhancements
+
+* Better config name: `:context_environment` replaces `:environment` in the
+  configuration.  `:environment` will continue to work for backwards compatibility.
+* New config option: `:production_aliases` can be set to a list of names that
+  should be translated to `"production"` for `notice.context.environment`.  See
+  README for more details.
+
 ## v2.1.0 (??????????)
 
 ### Enhancements

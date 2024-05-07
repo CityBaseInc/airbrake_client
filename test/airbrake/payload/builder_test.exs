@@ -3,6 +3,7 @@ defmodule Airbrake.Payload.BuilderTest do
   use ExUnitProperties
 
   import Mox
+  import Airbrake.Test.DataGenerator
 
   alias Airbrake.Payload.Builder
 
@@ -274,17 +275,5 @@ defmodule Airbrake.Payload.BuilderTest do
     defp session_does_not_includes_metadata do
       stub(MockConfig, :get, fn :session -> nil end)
     end
-  end
-
-  defp string_key do
-    string(:alphanumeric, min_length: 3)
-  end
-
-  defp env do
-    member_of(["dev", "uat", "staging", "prod"])
-  end
-
-  defp hostname do
-    string(:alphanumeric, min_length: 3)
   end
 end

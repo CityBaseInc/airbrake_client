@@ -8,7 +8,7 @@ defmodule Airbrake.Config do
 
     @callback get(atom(), any()) :: any()
 
-    @callback env :: String.t()
+    @callback context_environment :: String.t()
 
     @callback hostname :: String.t()
   end
@@ -25,14 +25,19 @@ defmodule Airbrake.Config do
 
   # Returns the name of the environment.
   @impl Airbrake.Config.Behaviour
-  def env do
-    case Application.get_env(:airbrake_client, :environment) do
-      nil -> hostname()
-      {:system, var} -> System.get_env(var, hostname())
-      atom_env when is_atom(atom_env) -> to_string(atom_env)
-      str_env when is_binary(str_env) -> str_env
-      fun_env when is_function(fun_env) -> fun_env.()
-    end
+  def context_environment(config \\ __MODULE__) do
+    config_context_environment =
+      case config.get(:context_environment) || config.get(:environment) do
+        nil -> hostname()
+        {:system, var} -> System.get_env(var, hostname())
+        atom_env when is_atom(atom_env) -> to_string(atom_env)
+        str_env when is_binary(str_env) -> str_env
+        fun_env when is_function(fun_env) -> fun_env.()
+      end
+
+    if config_context_environment in config.get(:production_aliases, []),
+      do: "production",
+      else: config_context_environment
   end
 
   # Returns a hostname.

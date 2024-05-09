@@ -16,28 +16,10 @@ Add `airbrake_client` to your dependencies:
 ```elixir
 defp deps do
   [
-    {:airbrake_client, "~> 0.10"}
+    {:airbrake_client, "~> 2.1"}
   ]
 end
 ```
-
-### Migrating from `airbrake`
-
-If you are switching from the original `airbrake` library:
-
-1. Replace the `:airbrake` dependency with the `:airbrake_client` dependency
-   above.
-    * You may want to start with version `~> 0.8.0` for maximum backwards
-      compatibility.
-1. Remove the `airbrake` dependency in your lockfile.
-    * Command: `mix deps.unlock --unused`
-    * If the dependency remains in the lockfile, check _all_ of your apps and
-      _all_ of your dependencies.
-1. Update your `config/*.exs` files to configure `:airbrake_client` instead of
-   `:airbrake`.
-    * A search-and-replace-in-project on `config :airbrake` can work really well.
-    * When you run your project(even running the tests), you should get a
-      complaint if you're still configuring `:airbrake`.
 
 ## Configuration
 
@@ -45,11 +27,13 @@ If you are switching from the original `airbrake` library:
 config :airbrake_client,
   api_key: System.get_env("AIRBRAKE_API_KEY"),
   project_id: System.get_env("AIRBRAKE_PROJECT_ID"),
-  environment: Mix.env(),
+  context_environment: System.get_env("KUBERNETES_CLUSTER"),
   filter_parameters: ["password"],
   filter_headers: ["authorization"],
   session: :include_logger_metadata,
-  host: "https://api.airbrake.io" # or your Errbit host
+  json_encoder: Jason,
+  production_aliases: ["prod"],
+  host: "https://api.airbrake.io"
 
 config :logger,
   backends: [{Airbrake.LoggerBackend, :error}, :console]
@@ -67,20 +51,47 @@ Required configuration arguments:
 
 Optional configuration arguments:
 
-  * `:environment` - (binary or function returning binary) the environment that
-    will be attached to each reported exception.
-  * `:filter_parameters` - (list of binaries) allows to filter out sensitive
-    parameters such as passwords and tokens.
-  * `:filter_headers` - (list of binaries) filters HTTP headers.
-  * `:host` - (binary) the URL of the HTTP host; defaults to
+  * `:context_environment` - (binary or function returning binary) the
+    deployment environment; used to set `notice.context.environment`.  See the
+    "Setting the environment in the context" section below.
+    * This was formerly `:environment`, and this can still be used.
+  * `:filter_parameters` - (list of strings) filters parameters that may map to
+    sensitive data such as passwords and tokens.
+  * `:filter_headers` - (list of strings) filters HTTP headers.
+  * `:host` - (string) the URL of the HTTP host; defaults to
     `https://api.airbrake.io`.
-  * `:ignore` - (MapSet of binary or function returning boolean or :all) allows
-    to ignore some or all exceptions.  See examples below.
+  * `:json_encoder` - (module) payload sent to Airbrake is JSON encoded by
+    calling `module.encode!/1`.
+    * You can use `Jason` from the [`jason`
+      library](https://hex.pm/packages/jason) or `Poison` from the [`poison`
+      library](https://hex.pm/packages/poison).
+    * `Poison` is used by default.
+  * `:ignore` - (MapSet of binary or function returning boolean or `:all`)
+    ignore some or all exceptions.  See examples below.
   * `:options` - (keyword list or function returning keyword list) values that
     are included in all reports to Airbrake.io.  See examples below.
+  * `:production_aliases` - (list of strings) a list of `"production"` aliases.
+    See the "Setting the environment in the context" section below.
   * `:session` - can be set to `:include_logger_metadata` to include Logger
     metadata in the `session` field of the report; omit this option if you do
     not want Logger metadata.  See below for more information.
+
+See the ["Create notice
+v3"](https://docs.airbrake.io/docs/devops-tools/api/#create-notice-v3) section
+in the Airbrake API docs to understand some of these options better.
+
+### Setting the environment in the context
+
+The value for `notice.context.environment` when [creating a
+notice](https://docs.airbrake.io/docs/devops-tools/api/#create-notice-v3) can be
+set with the `:context_environment` config.
+
+Often it is easiest to configure `:context_environment` with some environment
+variable.  However,  to get production notifications, the `environment` must be
+set to `"production"` (case independent).  Maybe your environment variable
+returns the value `"prod"`.  Set `:production_aliases` to a list of strings that
+should be converted into `"production"`.  The `config` example above will turn
+`"prod"` into `"production"`.
 
 ### Logger metadata in the `session`
 
@@ -207,3 +218,21 @@ Airbrake.monitor(Registered.Process.Name)
 The Elixir apps defined in `integration_test_apps` are used for testing
 different dependency scenarios.  If you make changes to the way `jason` or
 `poison` is used this library, you should consider adding tests to those apps.
+
+## Migrating from `airbrake`
+
+If you are switching from the original `airbrake` library:
+
+1. Replace the `:airbrake` dependency with the `:airbrake_client` dependency
+   above.
+    * You may want to start with version `~> 0.8.0` for maximum backwards
+      compatibility.
+1. Remove the `airbrake` dependency in your lockfile.
+    * Command: `mix deps.unlock --unused`
+    * If the dependency remains in the lockfile, check _all_ of your apps and
+      _all_ of your dependencies.
+1. Update your `config/*.exs` files to configure `:airbrake_client` instead of
+   `:airbrake`.
+    * A search-and-replace-in-project on `config :airbrake` can work really well.
+    * When you run your project(even running the tests), you should get a
+      complaint if you're still configuring `:airbrake`.

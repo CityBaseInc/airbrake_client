@@ -34,9 +34,6 @@ defmodule Airbrake.Utils do
       else: {k, filter(v, filtered_attributes)}
   end
 
-  @doc """
-  Turns tuples into lists for JSON serialization of Airbrake payloads
-  """
   def detuple(%module{} = struct) do
     fields = struct |> Map.from_struct() |> detuple()
     struct(module, fields)
@@ -58,9 +55,6 @@ defmodule Airbrake.Utils do
     other
   end
 
-  @doc """
-  Recursively breaks down structs for JSON serialization of Airbrake payloads
-  """
   def destruct(%_module{} = struct) do
     struct |> Map.from_struct() |> destruct()
   end

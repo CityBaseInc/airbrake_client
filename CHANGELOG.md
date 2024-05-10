@@ -1,6 +1,6 @@
-# Changelog for v0.x
+# Changelog
 
-## IN PROGRESS
+## v2.2.0 (2024-05-10)
 
 ### Enhancements
 
@@ -9,6 +9,18 @@
 * New config option: `:production_aliases` can be set to a list of names that
   should be translated to `"production"` for `notice.context.environment`.  See
   README for more details.
+* New documentation for config option: `:json_encoder` is documented in the
+  README.
+* New JSON encoder protections:
+    * If the JSON encoder module does not exist at compile time, the library
+      will compile with an error.
+    * If the JSON encoder module does not exist when `Airbrake.Worker` is
+      started, the process will not start.
+    * If the JSON encoder module _does_ exist but does not define `encode!/1`
+      when a report is made, a warning will be output to stderr and a _very_
+      simple Airbrake notice about the missing `encode!/1` function _will_ be
+      sent.  Previously, the `Airbrake.Worker` would crash and take the app down
+      with it without sending any Airbrake notices.
 
 ## v2.1.0 (??????????)
 

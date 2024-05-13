@@ -2,12 +2,14 @@ defmodule Airbrake.Worker do
   @moduledoc false
   use GenServer
 
+  require Airbrake.JSONEncoder
+
+  alias Airbrake.{Config, Payload}
+
   defmodule State do
     @moduledoc false
     defstruct refs: %{}, last_exception: nil
   end
-
-  alias Airbrake.Config
 
   @name __MODULE__
   @request_headers [{"Content-Type", "application/json"}]
@@ -72,7 +74,15 @@ defmodule Airbrake.Worker do
     [type: inspect(exception.__struct__), message: Exception.message(exception)]
   end
 
-  def init(state), do: {:ok, state}
+  def init(state) do
+    json_encoder = Airbrake.JSONEncoder.encoder()
+
+    if Code.ensure_loaded?(json_encoder) do
+      {:ok, state}
+    else
+      {:stop, "JSON encoder #{inspect(json_encoder)} is missing"}
+    end
+  end
 
   def handle_cast({:report, exception, stacktrace, options}, %{last_exception: {exception, details}} = state) do
     enhanced_options =
@@ -109,9 +119,9 @@ defmodule Airbrake.Worker do
   defp send_report(exception, stacktrace, options) do
     unless ignore?(exception) do
       enhanced_options = build_options(options)
-      payload = Airbrake.Payload.new(exception, stacktrace, enhanced_options)
-      json_encoder = Application.get_env(:airbrake_client, :json_encoder, Poison)
-      @http_adapter.post(notify_url(), json_encoder.encode!(payload), @request_headers)
+      payload = Payload.new(exception, stacktrace, enhanced_options)
+      json_payload = encode_payload(payload)
+      @http_adapter.post(notify_url(), json_payload, @request_headers)
     end
   end
 
@@ -126,6 +136,14 @@ defmodule Airbrake.Worker do
       _ ->
         current_options
     end
+  end
+
+  defp encode_payload(%Payload{} = payload) do
+    Airbrake.JSONEncoder.encode!(payload)
+  rescue
+    UndefinedFunctionError ->
+      IO.warn("JSON encoder does not have an encode!/1 function")
+      "{\"errors\":[{\"message\":\"JSON encoder does not have an encode!/1 function\"}]}"
   end
 
   defp get_stacktrace do

@@ -20,7 +20,7 @@ defmodule JasonOnlyApp.MixProject do
   defp deps do
     [
       {:airbrake_client, ">= 0.0.0", path: "../.."},
-      {:jason, ">= 1.0.0", optional: true}
+      {:jason, ">= 1.0.0"}
     ]
   end
 end

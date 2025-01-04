@@ -6,7 +6,10 @@ defmodule Airbrake.Payload.BacktraceTests do
 
   describe "from_stacktrace/1" do
     test "turns a whole stacktrace into a backtrace" do
+      # This stacktrace is a hodgepodge of stacktrace entries.
       stacktrace = [
+        {Ecto.Adapters.SQL, :raise_sql_call_error, 1,
+         [file: ~c"lib/ecto/adapters/sql.ex", line: 1078, error_info: %{module: Exception}]},
         {Harbour, :cats, [3], []},
         {:erl_eval, :do_apply, 6, [file: ~c"erl_eval.erl", line: 680]},
         {:erl_eval, :try_clauses, 8, [file: ~c"erl_eval.erl", line: 914]},
@@ -18,6 +21,11 @@ defmodule Airbrake.Payload.BacktraceTests do
       ]
 
       assert Backtrace.from_stacktrace(stacktrace) == [
+               %{
+                 file: "lib/ecto/adapters/sql.ex",
+                 function: "Elixir.Ecto.Adapters.SQL.raise_sql_call_error/1",
+                 line: 1078
+               },
                %{file: "unknown", function: "Elixir.Harbour.cats(3)", line: 0},
                %{file: "erl_eval.erl", function: ":erl_eval.do_apply/6", line: 680},
                %{file: "erl_eval.erl", function: ":erl_eval.try_clauses/8", line: 914},
@@ -50,9 +58,10 @@ defmodule Airbrake.Payload.BacktraceTests do
                 function <- atom(:alphanumeric),
                 arity <- positive_integer(),
                 file <- string(:ascii),
-                line <- positive_integer() do
+                line <- positive_integer(),
+                generic_extras <- keyword_of(string(:ascii)) do
         entry_file = String.to_charlist(file)
-        entry = {module, function, arity, [file: entry_file, line: line]}
+        entry = {module, function, arity, [file: entry_file, line: line] ++ generic_extras}
 
         assert Backtrace.from_stacktrace_entry(entry) == %{
                  file: file,

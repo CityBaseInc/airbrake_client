@@ -4,18 +4,13 @@ defmodule Airbrake.Payload.Backtrace do
   def from_stacktrace(stacktrace),
     do: Enum.map(stacktrace, &from_stacktrace_entry/1)
 
-  def from_stacktrace_entry({module, function, args, []}) do
-    %{
-      file: "unknown",
-      line: 0,
-      function: "#{format_module(module)}.#{function}#{format_args(args)}"
-    }
-  end
+  def from_stacktrace_entry({module, function, args, opts}) do
+    file = Keyword.get(opts, :file, ~c"unknown")
+    line = Keyword.get(opts, :line, 0)
 
-  def from_stacktrace_entry({module, function, args, [file: file, line: line_number]}) do
     %{
       file: file |> List.to_string(),
-      line: line_number,
+      line: line,
       function: "#{format_module(module)}.#{function}#{format_args(args)}"
     }
   end

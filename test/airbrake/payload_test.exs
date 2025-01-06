@@ -48,7 +48,7 @@ defmodule Airbrake.PayloadTest do
                notifier: %{
                  name: "Airbrake Client",
                  url: "https://github.com/CityBaseInc/airbrake_client",
-                 version: "2.2.0"
+                 version: "2.2.1"
                }
              } = Payload.new(exception, stacktrace)
     end
@@ -105,7 +105,7 @@ defmodule Airbrake.PayloadTest do
                notifier: %{
                  name: "Airbrake Client",
                  url: "https://github.com/CityBaseInc/airbrake_client",
-                 version: "2.2.0"
+                 version: "2.2.1"
                }
              } = Payload.new(@exception, @stacktrace)
     end
@@ -198,7 +198,7 @@ defmodule Airbrake.PayloadTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.0"
+                 "version" => "2.2.1"
                },
                "params" => nil,
                "session" => nil
@@ -242,7 +242,7 @@ defmodule Airbrake.PayloadTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.0"
+                 "version" => "2.2.1"
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}
@@ -281,7 +281,7 @@ defmodule Airbrake.PayloadTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.0"
+                 "version" => "2.2.1"
                },
                "params" => nil,
                "session" => nil
@@ -325,7 +325,7 @@ defmodule Airbrake.PayloadTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.0"
+                 "version" => "2.2.1"
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}

@@ -1,5 +1,11 @@
 # Changelog
 
+## v2.2.1 (2025-01-04)
+
+### Bug fixes
+
+* Handles a stacktrace entry that includes unexpected values.
+
 ## v2.2.0 (2024-05-10)
 
 ### Enhancements

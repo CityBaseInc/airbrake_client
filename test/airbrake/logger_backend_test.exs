@@ -35,5 +35,60 @@ defmodule Airbrake.LoggerBackendTest do
 
       assert_receive(url: _url, payload: _http_payload)
     end
+
+    test "raises Airbrake for RuntimeError from raise" do
+      caller = self()
+
+      expect(HTTPMock, :post, fn url, payload, _headers ->
+        assert payload =~ "\"type\":\"RuntimeError\""
+        assert payload =~ "\"message\":\"test exception\""
+        send(caller, url: url, payload: payload)
+        {:ok, %{status_code: 204}}
+      end)
+
+      capture_log(fn ->
+        try do
+          raise "test exception"
+        rescue
+          e ->
+            Logger.error(Exception.format(:error, e, __STACKTRACE__))
+        end
+      end)
+
+      assert_receive(url: _url, payload: _http_payload)
+    end
+
+    test "raises Airbrake for ArgumentError" do
+      caller = self()
+
+      expect(HTTPMock, :post, fn url, payload, _headers ->
+        assert payload =~ "\"type\":\"ArgumentError\""
+        send(caller, url: url, payload: payload)
+        {:ok, %{status_code: 204}}
+      end)
+
+      capture_log(fn ->
+        try do
+          Integer.to_string(1.0)
+        rescue
+          e ->
+            Logger.error(Exception.format(:error, e, __STACKTRACE__))
+        end
+      end)
+
+      assert_receive(url: _url, payload: _http_payload)
+    end
+
+    test "does NOT raise Airbrake for plain text Logger.error" do
+      stub(HTTPMock, :post, fn _, _, _ ->
+        flunk("HTTPMock.post should not be called for plain text error logs")
+      end)
+
+      capture_log(fn ->
+        Logger.error("foo bar")
+      end)
+
+      refute_receive(_any, 100)
+    end
   end
 end

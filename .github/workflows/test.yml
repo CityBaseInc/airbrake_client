@@ -53,7 +53,7 @@ jobs:
       - run: echo "Elixir tests for many versions of Elixir and OTP have successfully completed."
 
   poison_only_test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     name: Test - poison only, no jason
     defaults:
       run:
@@ -68,7 +68,7 @@ jobs:
       - run: mix test
 
   jason_only_test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     name: Test - jason only, no poison
     defaults:
       run:

@@ -66,7 +66,7 @@ defmodule Airbrake.Mixfile do
       {:jason, ">= 1.0.0", optional: true},
       {:mox, "~> 1.1", only: :test},
       {:poison, ">= 2.0.0", optional: true},
-      {:stream_data, "~> 0.6", only: [:dev, :test]}
+      {:stream_data, "~> 1.2", only: [:dev, :test]}
     ]
   end
 

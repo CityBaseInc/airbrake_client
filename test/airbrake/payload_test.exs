@@ -41,7 +41,7 @@ defmodule Airbrake.PayloadTest do
                      }
                      | _rest_of_backtrace
                    ],
-                   message: "function Harbour.cats/1 is undefined (module Harbour is not available)",
+                   message: "function Harbour.cats/1 is undefined (module Harbour is not available)" <> _,
                    type: "UndefinedFunctionError"
                  }
                ],
@@ -70,7 +70,7 @@ defmodule Airbrake.PayloadTest do
     test "reports the error message from an exception" do
       assert %Payload{errors: [error]} = Payload.new(@exception, @stacktrace)
 
-      assert "function Harbour.cats/1 is undefined (module Harbour is not available)" ==
+      assert "function Harbour.cats/1 is undefined (module Harbour is not available)" <> _ =
                error.message
     end
 

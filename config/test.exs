@@ -4,5 +4,5 @@ import Config
 config :airbrake_client,
   api_key: "TESTING_API_KEY",
   project_id: 8_675_309,
-  private: [http_adapter: Airbrake.HTTPMock],
+  private: [http_adapter: Airbrake.MockHTTPoison],
   filter_parameters: ["password"]

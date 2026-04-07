@@ -1,9 +1,10 @@
 defmodule Airbrake.WorkerTest do
   use ExUnit.Case, async: false
 
+  import Airbrake.Test
   import Mox
 
-  alias Airbrake.{HTTPMock, Payload}
+  alias Airbrake.{MockHTTPoison, Payload}
   alias Airbrake.Worker.State
 
   setup :set_mox_from_context
@@ -31,16 +32,11 @@ defmodule Airbrake.WorkerTest do
         |> Payload.new(stacktrace)
         |> Map.from_struct()
 
-      caller = self()
-
-      expect(HTTPMock, :post, fn url, payload, _headers ->
-        send(caller, url: url, payload: payload)
-        {:ok, %{status_code: 204}}
-      end)
+      expect(MockHTTPoison, :post, airbrake_post_mock_fun())
 
       Airbrake.Worker.report(exception, stacktrace: stacktrace)
 
-      assert_receive url: _url, payload: http_payload
+      assert_receive {:airbrake_report, %{payload: http_payload}}, 500
 
       decoded_http_payload =
         http_payload
@@ -51,16 +47,11 @@ defmodule Airbrake.WorkerTest do
     end
 
     test "sends the report to the right URL", %{exception: exception, stacktrace: stacktrace} do
-      caller = self()
-
-      expect(HTTPMock, :post, fn url, payload, _headers ->
-        send(caller, url: url, payload: payload)
-        {:ok, %{status_code: 204}}
-      end)
+      expect(MockHTTPoison, :post, airbrake_post_mock_fun())
 
       Airbrake.Worker.report(exception, stacktrace: stacktrace)
 
-      assert_receive url: url, payload: _http_payload
+      assert_receive {:airbrake_report, %{url: url}}, 500
 
       # Uses default host from Airbrake.Worker.
       # Uses project id and api key from config/test.exs.
@@ -68,16 +59,11 @@ defmodule Airbrake.WorkerTest do
     end
 
     test "generates a stacktrace if one is not provided", %{exception: exception} do
-      caller = self()
-
-      expect(HTTPMock, :post, fn url, payload, _headers ->
-        send(caller, url: url, payload: payload)
-        {:ok, %{status_code: 204}}
-      end)
+      expect(MockHTTPoison, :post, airbrake_post_mock_fun())
 
       Airbrake.Worker.report(exception)
 
-      assert_receive url: _url, payload: http_payload
+      assert_receive {:airbrake_report, %{payload: http_payload}}, 500
 
       assert %{"errors" => [only_error]} = http_payload |> Poison.decode!()
       assert %{"backtrace" => stacktrace} = only_error
@@ -98,8 +84,8 @@ defmodule Airbrake.WorkerTest do
 
   describe "remember/1" do
     setup do
-      stub(Airbrake.HTTPMock, :post, fn _url, _payload, _headers ->
-        {:ok, %{status_code: 204}}
+      stub(Airbrake.MockHTTPoison, :post, fn _url, _payload, _headers ->
+        {:ok, %{status_code: 201}}
       end)
 
       :ok

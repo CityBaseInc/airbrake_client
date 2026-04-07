@@ -7,8 +7,8 @@ defmodule AirbrakeTest do
   setup :verify_on_exit!
 
   setup do
-    stub(Airbrake.HTTPMock, :post, fn _url, _payload, _headers ->
-      {:ok, %{status_code: 204}}
+    stub(Airbrake.MockHTTPoison, :post, fn _url, _payload, _headers ->
+      {:ok, %{status_code: 201}}
     end)
 
     Airbrake.start()

@@ -7,7 +7,8 @@ defmodule Airbrake.LoggerBackendTest do
 
   alias Airbrake.{HTTPMock, LoggerBackend}
 
-  setup [:set_mox_global, :verify_on_exit!]
+  setup :set_mox_from_context
+  setup :verify_on_exit!
 
   setup do
     Logger.add_backend({LoggerBackend, :error})

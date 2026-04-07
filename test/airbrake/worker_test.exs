@@ -6,7 +6,8 @@ defmodule Airbrake.WorkerTest do
   alias Airbrake.{HTTPMock, Payload}
   alias Airbrake.Worker.State
 
-  setup [:set_mox_global, :verify_on_exit!]
+  setup :set_mox_from_context
+  setup :verify_on_exit!
 
   setup do
     worker_pid = start_worker()

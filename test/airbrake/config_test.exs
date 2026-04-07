@@ -7,6 +7,7 @@ defmodule Airbrake.ConfigTest do
   import Airbrake.Test.DataGenerator
   import Mox
 
+  setup :set_mox_from_context
   setup :verify_on_exit!
 
   describe "context_environment/0" do

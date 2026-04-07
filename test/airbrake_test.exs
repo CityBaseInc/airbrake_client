@@ -3,7 +3,8 @@ defmodule AirbrakeTest do
 
   import Mox
 
-  setup [:set_mox_global, :verify_on_exit!]
+  setup :set_mox_from_context
+  setup :verify_on_exit!
 
   setup do
     stub(Airbrake.HTTPMock, :post, fn _url, _payload, _headers ->

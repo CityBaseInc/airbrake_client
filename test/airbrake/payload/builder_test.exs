@@ -7,6 +7,7 @@ defmodule Airbrake.Payload.BuilderTest do
 
   alias Airbrake.Payload.Builder
 
+  setup :set_mox_from_context
   setup :verify_on_exit!
 
   describe "build/1 :context" do

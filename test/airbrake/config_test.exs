@@ -2,10 +2,10 @@ defmodule Airbrake.ConfigTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias Airbrake.Config
-
   import Airbrake.Test.DataGenerator
   import Mox
+
+  alias Airbrake.Config
 
   setup :set_mox_from_context
   setup :verify_on_exit!

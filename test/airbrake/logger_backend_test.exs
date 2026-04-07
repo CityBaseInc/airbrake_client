@@ -1,12 +1,13 @@
 defmodule Airbrake.LoggerBackendTest do
   use ExUnit.Case, async: false
 
-  import Mox
-  import ExUnit.CaptureLog
   import Airbrake.Test
-  require Logger
+  import ExUnit.CaptureLog
+  import Mox
 
   alias Airbrake.{LoggerBackend, MockHTTPoison}
+
+  require Logger
 
   setup :set_mox_from_context
   setup :verify_on_exit!

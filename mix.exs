@@ -60,14 +60,15 @@ defmodule Airbrake.Mixfile do
 
   defp deps do
     [
+      {:httpoison, "~> 1.0 or ~> 2.0"},
+      {:jason, ">= 1.0.0", optional: true},
+      {:poison, ">= 2.0.0", optional: true},
+      # dev and test
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.30", only: [:dev, :test]},
       {:excoveralls, "~> 0.18", only: :test},
-      {:httpoison, "~> 1.0 or ~> 2.0"},
-      {:jason, ">= 1.0.0", optional: true},
       {:mox, "~> 1.1", only: :test},
-      {:poison, ">= 2.0.0", optional: true},
       {:stream_data, "~> 1.2", only: [:dev, :test]}
     ]
   end

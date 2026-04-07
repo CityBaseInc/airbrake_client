@@ -2,9 +2,9 @@ defmodule Airbrake.Worker do
   @moduledoc false
   use GenServer
 
-  require Airbrake.JSONEncoder
-
   alias Airbrake.{Config, Payload}
+
+  require Airbrake.JSONEncoder
 
   defmodule State do
     @moduledoc false

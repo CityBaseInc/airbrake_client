@@ -1,6 +1,8 @@
 defmodule Airbrake.Config do
   @moduledoc false
 
+  @behaviour Airbrake.Config.Behaviour
+
   defmodule Behaviour do
     @moduledoc false
 
@@ -12,8 +14,6 @@ defmodule Airbrake.Config do
 
     @callback hostname :: String.t()
   end
-
-  @behaviour Airbrake.Config.Behaviour
 
   # Gets a value from the `:airbrake_client` config.
   @impl Airbrake.Config.Behaviour

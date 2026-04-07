@@ -12,16 +12,18 @@ defmodule Airbrake do
 
   use Application
 
+  alias Airbrake.Config.Validator
+
   @doc false
   def start(_type \\ :normal, _args \\ []) do
-    import Supervisor.Spec, warn: false
+    with :ok <- Validator.validate() do
+      children = [
+        Airbrake.Worker
+      ]
 
-    children = [
-      Airbrake.Worker
-    ]
-
-    opts = [strategy: :one_for_one, name: Airbrake.Supervisor]
-    Supervisor.start_link(children, opts)
+      opts = [strategy: :one_for_one, name: Airbrake.Supervisor]
+      Supervisor.start_link(children, opts)
+    end
   end
 
   @spec report(Exception.t() | [type: String.t(), message: String.t()], Keyword.t()) :: :ok | {:error, ArgumentError}

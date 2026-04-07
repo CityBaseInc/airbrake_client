@@ -100,7 +100,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: _build
-          key: elixir-build-v1-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-${{ hashFiles('lib/**/*.ex', 'config/*.exs', 'mix.exs') }}
+          key: elixir-build-v2-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-${{ hashFiles('lib/**/*.ex', 'config/*.exs', 'mix.exs') }}
 
       - name: Compile Deps
         run: mix deps.compile
@@ -128,4 +128,4 @@ jobs:
     needs: [all_tests]
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Elixir tests and static analyses completed succcessfully."
+      - run: echo "Elixir tests and static analyses completed successfully."

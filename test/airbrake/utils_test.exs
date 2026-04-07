@@ -45,6 +45,71 @@ defmodule Airbrake.UtilsTest do
                "struct" => %{"baz" => 100, "qux" => "[FILTERED]"}
              }
     end
+
+    test "filters a keyword list by key" do
+      input = [a: 1, b: 2]
+      filtered_attributes = ["a"]
+
+      assert Utils.filter(input, filtered_attributes) == [a: "[FILTERED]", b: 2]
+    end
+
+    test "filters an associative list with string keys" do
+      input = [{"a", 1}, {"b", 2}]
+      filtered_attributes = ["a"]
+
+      assert Utils.filter(input, filtered_attributes) == [{"a", "[FILTERED]"}, {"b", 2}]
+    end
+
+    test "filters a keyword list with duplicate keys" do
+      input = [a: 1, a: 2, b: 3]
+      filtered_attributes = ["a"]
+
+      assert Utils.filter(input, filtered_attributes) == [a: "[FILTERED]", a: "[FILTERED]", b: 3]
+    end
+
+    test "recursively filters values in a keyword list" do
+      input = [a: 1, b: %{"secret" => "password", "name" => "Alice"}]
+      filtered_attributes = ["secret"]
+
+      assert Utils.filter(input, filtered_attributes) == [a: 1, b: %{"secret" => "[FILTERED]", "name" => "Alice"}]
+    end
+
+    test "does not filter a non-associative list" do
+      input = [1, 2, "three", %{"secret" => "password"}]
+      filtered_attributes = ["secret"]
+
+      assert Utils.filter(input, filtered_attributes) == [1, 2, "three", %{"secret" => "[FILTERED]"}]
+    end
+
+    test "filters inside a non-string, non-atom key in an associative list" do
+      input = [{%{"secret" => "password"}, "value"}]
+      filtered_attributes = ["secret"]
+
+      assert Utils.filter(input, filtered_attributes) == [{%{"secret" => "[FILTERED]"}, "value"}]
+    end
+
+    test "recursively filters inside a tuple" do
+      input = {:ok, %{"secret" => "password", "name" => "Alice"}}
+      filtered_attributes = ["secret"]
+
+      assert Utils.filter(input, filtered_attributes) ==
+               {:ok, %{"secret" => "[FILTERED]", "name" => "Alice"}}
+    end
+
+    test "recursively filters inside a nested tuple" do
+      input = {:ok, {:error, %{"secret" => "password", "name" => "Alice"}}}
+      filtered_attributes = ["secret"]
+
+      assert Utils.filter(input, filtered_attributes) ==
+               {:ok, {:error, %{"secret" => "[FILTERED]", "name" => "Alice"}}}
+    end
+
+    test "filters a keyword list nested in a map" do
+      input = %{"data" => [a: "secret", b: "public"]}
+      filtered_attributes = ["a"]
+
+      assert Utils.filter(input, filtered_attributes) == %{"data" => [a: "[FILTERED]", b: "public"]}
+    end
   end
 
   describe "detuple/1" do

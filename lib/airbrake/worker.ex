@@ -21,7 +21,7 @@ defmodule Airbrake.Worker do
   @doc """
   Send a report to Airbrake.
   """
-  @spec report(Exception.t() | [type: String.t(), message: String.t()], Keyword.t()) :: :ok
+  @spec report(Exception.t() | [type: String.t(), message: String.t()], Keyword.t()) :: :ok | {:error, ArgumentError}
   def report(exception, options \\ [])
 
   def report(%{__exception__: true} = exception, options) when is_list(options) do
@@ -43,7 +43,7 @@ defmodule Airbrake.Worker do
     {:error, ArgumentError}
   end
 
-  @spec remember(Exception.t() | [type: String.t(), message: String.t()], Keyword.t()) :: :ok
+  @spec remember(Exception.t() | [type: String.t(), message: String.t()], Keyword.t()) :: :ok | {:error, ArgumentError}
   def remember(exception, options \\ [])
 
   def remember(%{__exception__: true} = exception, options) when is_list(options) do

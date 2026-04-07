@@ -24,7 +24,7 @@ defmodule Airbrake do
     Supervisor.start_link(children, opts)
   end
 
-  @spec report(Exception.t() | [type: String.t(), message: String.t()], Keyword.t()) :: :ok
+  @spec report(Exception.t() | [type: String.t(), message: String.t()], Keyword.t()) :: :ok | {:error, ArgumentError}
   def report(exception, options \\ [])
 
   @doc """

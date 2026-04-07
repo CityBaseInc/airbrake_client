@@ -25,7 +25,7 @@ defmodule Airbrake.Plug do
 
         conn_data = %{
           url: "#{conn.scheme}://#{conn.host}:#{conn.port}#{conn.request_path}",
-          userIP: conn.remote_ip |> Tuple.to_list() |> Enum.join("."),
+          userIP: conn.remote_ip |> :inet.ntoa() |> to_string(),
           userAgent: headers["user-agent"],
           cookies: conn.req_cookies
         }

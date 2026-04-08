@@ -3,6 +3,8 @@ defmodule DefaultProcessorAppTest do
 
   alias Airbrake.Payload
 
+  @airbrake_client_version Application.spec(:airbrake_client, :vsn) |> to_string()
+
   test "payload_processor is not configured" do
     refute Application.get_env(:airbrake_client, :payload_processor)
   end
@@ -38,7 +40,7 @@ defmodule DefaultProcessorAppTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.1"
+                 "version" => @airbrake_client_version
                },
                "params" => nil,
                "session" => nil
@@ -87,7 +89,7 @@ defmodule DefaultProcessorAppTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.1"
+                 "version" => @airbrake_client_version
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}

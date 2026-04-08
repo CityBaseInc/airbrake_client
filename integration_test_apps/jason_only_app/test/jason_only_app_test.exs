@@ -4,6 +4,8 @@ defmodule JasonOnlyAppTest do
   alias Airbrake.Config.Validator
   alias Airbrake.Payload
 
+  @airbrake_client_version Application.spec(:airbrake_client, :vsn) |> to_string()
+
   test "Poison is undefined" do
     # There is no conditional compilation for `poison`... yet.
     refute Code.ensure_compiled(Poison) == {:module, Poison}
@@ -53,7 +55,7 @@ defmodule JasonOnlyAppTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.1"
+                 "version" => @airbrake_client_version
                },
                "params" => nil,
                "session" => nil
@@ -102,7 +104,7 @@ defmodule JasonOnlyAppTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.1"
+                 "version" => @airbrake_client_version
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}

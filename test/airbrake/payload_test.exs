@@ -285,7 +285,7 @@ defmodule Airbrake.PayloadTest do
                },
                "params" => nil,
                "session" => nil
-             } = payload |> Jason.encode!() |> Jason.decode!()
+             } = payload |> Map.from_struct() |> Jason.encode!() |> Jason.decode!()
     end
 
     test "with all options" do
@@ -329,7 +329,7 @@ defmodule Airbrake.PayloadTest do
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}
-             } = payload |> Jason.encode!() |> Jason.decode!()
+             } = payload |> Map.from_struct() |> Jason.encode!() |> Jason.decode!()
     end
   end
 end

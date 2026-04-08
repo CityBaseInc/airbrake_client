@@ -1,12 +1,26 @@
 defmodule PoisonOnlyAppTest do
   use ExUnit.Case
 
+  alias Airbrake.Config.Validator
   alias Airbrake.Payload
 
   test "Jason is undefined" do
     # Makes sure conditional compilation for `jason` is skipped without error
     # when `jason` is not a dependency.
     refute Code.ensure_compiled(Jason) == {:module, Jason}
+  end
+
+  describe "Config.Validator" do
+    test "accepts PoisonPayloadProcessor" do
+      assert :ok = Validator.validate(api_key: "key", project_id: 1, payload_processor: Airbrake.PoisonPayloadProcessor)
+    end
+
+    test "rejects JasonPayloadProcessor because Jason is not available" do
+      assert {:error, errors} =
+               Validator.validate(api_key: "key", project_id: 1, payload_processor: Airbrake.JasonPayloadProcessor)
+
+      assert ":payload_processor module Airbrake.JasonPayloadProcessor is not available" in errors
+    end
   end
 
   describe "Poison encoding" do
@@ -44,7 +58,7 @@ defmodule PoisonOnlyAppTest do
                },
                "params" => nil,
                "session" => nil
-             } = payload |> Poison.encode!() |> Poison.decode!()
+             } = payload |> Map.from_struct() |> Poison.encode!() |> Poison.decode!()
     end
 
     test "with all options" do
@@ -93,7 +107,7 @@ defmodule PoisonOnlyAppTest do
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}
-             } = payload |> Poison.encode!() |> Poison.decode!()
+             } = payload |> Map.from_struct() |> Poison.encode!() |> Poison.decode!()
     end
   end
 end

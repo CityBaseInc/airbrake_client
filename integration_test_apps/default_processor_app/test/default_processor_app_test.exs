@@ -1,28 +1,13 @@
-defmodule JasonOnlyAppTest do
+defmodule DefaultProcessorAppTest do
   use ExUnit.Case
 
-  alias Airbrake.Config.Validator
   alias Airbrake.Payload
 
-  test "Poison is undefined" do
-    # There is no conditional compilation for `poison`... yet.
-    refute Code.ensure_compiled(Poison) == {:module, Poison}
+  test "payload_processor is not configured" do
+    refute Application.get_env(:airbrake_client, :payload_processor)
   end
 
-  describe "Config.Validator" do
-    test "accepts JasonPayloadProcessor" do
-      assert :ok = Validator.validate(api_key: "key", project_id: 1, payload_processor: Airbrake.JasonPayloadProcessor)
-    end
-
-    test "rejects PoisonPayloadProcessor because Poison is not available" do
-      assert {:error, errors} =
-               Validator.validate(api_key: "key", project_id: 1, payload_processor: Airbrake.PoisonPayloadProcessor)
-
-      assert ":payload_processor module Airbrake.PoisonPayloadProcessor is not available" in errors
-    end
-  end
-
-  describe "Jason encoding" do
+  describe "default encoding (Poison)" do
     test "with minimal options" do
       exception = [
         type: "SomeAwfulError",
@@ -57,7 +42,7 @@ defmodule JasonOnlyAppTest do
                },
                "params" => nil,
                "session" => nil
-             } = payload |> Map.from_struct() |> Jason.encode!() |> Jason.decode!()
+             } = payload |> Poison.encode!() |> Poison.decode!()
     end
 
     test "with all options" do
@@ -106,7 +91,7 @@ defmodule JasonOnlyAppTest do
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}
-             } = payload |> Map.from_struct() |> Jason.encode!() |> Jason.decode!()
+             } = payload |> Poison.encode!() |> Poison.decode!()
     end
   end
 end

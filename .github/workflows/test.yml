@@ -76,6 +76,36 @@ jobs:
       - run: mix deps.get
       - run: mix test
 
+  json_only_test:
+    runs-on: ubuntu-latest
+    name: Test - json only, no jason or poison
+    defaults:
+      run:
+        working-directory: integration_test_apps/json_only_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '28.1'
+          elixir-version: '1.19.1'
+      - run: mix deps.get
+      - run: mix test
+
+  default_processor_test:
+    runs-on: ubuntu-latest
+    name: Test - default payload processor
+    defaults:
+      run:
+        working-directory: integration_test_apps/default_processor_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '28.1'
+          elixir-version: '1.19.1'
+      - run: mix deps.get
+      - run: mix test
+
   all_tests:
     runs-on: ubuntu-latest
     env:

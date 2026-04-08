@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+INTEGRATION_DIR="$(cd "$(dirname "$0")/../integration_test_apps" && pwd)"
+
+available_tests() {
+  for dir in "$INTEGRATION_DIR"/*/; do
+    basename "$dir"
+  done
+}
+
+run_test() {
+  local app="$1"
+  local app_dir="$INTEGRATION_DIR/$app"
+
+  if [ ! -d "$app_dir" ]; then
+    echo "Error: unknown integration test '$app'" >&2
+    echo "Available tests:" >&2
+    available_tests >&2
+    exit 1
+  fi
+
+  echo "==> Running integration test: $app"
+  (cd "$app_dir" && rm -rf _build && mix deps.get --quiet && mix test)
+}
+
+usage() {
+  echo "Usage: $(basename "$0") [--all] [<test>...]"
+  echo ""
+  echo "Available tests:"
+  available_tests
+}
+
+if [ $# -eq 0 ]; then
+  usage
+  exit 1
+fi
+
+if [ "$1" = "--all" ]; then
+  for app in $(available_tests); do
+    run_test "$app"
+  done
+else
+  for app in "$@"; do
+    run_test "$app"
+  done
+fi

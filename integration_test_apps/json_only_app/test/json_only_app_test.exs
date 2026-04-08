@@ -1,28 +1,17 @@
-defmodule JasonOnlyAppTest do
+defmodule JsonOnlyAppTest do
   use ExUnit.Case
 
-  alias Airbrake.Config.Validator
   alias Airbrake.Payload
 
+  test "Jason is undefined" do
+    refute Code.ensure_compiled(Jason) == {:module, Jason}
+  end
+
   test "Poison is undefined" do
-    # There is no conditional compilation for `poison`... yet.
     refute Code.ensure_compiled(Poison) == {:module, Poison}
   end
 
-  describe "Config.Validator" do
-    test "accepts JasonPayloadProcessor" do
-      assert :ok = Validator.validate(api_key: "key", project_id: 1, payload_processor: Airbrake.JasonPayloadProcessor)
-    end
-
-    test "rejects PoisonPayloadProcessor because Poison is not available" do
-      assert {:error, errors} =
-               Validator.validate(api_key: "key", project_id: 1, payload_processor: Airbrake.PoisonPayloadProcessor)
-
-      assert ":payload_processor module Airbrake.PoisonPayloadProcessor is not available" in errors
-    end
-  end
-
-  describe "Jason encoding" do
+  describe ":json encoding" do
     test "with minimal options" do
       exception = [
         type: "SomeAwfulError",
@@ -36,10 +25,11 @@ defmodule JasonOnlyAppTest do
 
       assert %Payload{} = payload = Payload.new(exception, stacktrace)
 
+      # `:json` encodes nil atoms as the string "nil" (not JSON null).
       assert %{
-               "apiKey" => nil,
+               "apiKey" => "nil",
                "context" => %{"environment" => _, "hostname" => _},
-               "environment" => nil,
+               "environment" => "nil",
                "errors" => [
                  %{
                    "backtrace" => [
@@ -55,9 +45,9 @@ defmodule JasonOnlyAppTest do
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
                  "version" => "2.2.1"
                },
-               "params" => nil,
-               "session" => nil
-             } = payload |> Map.from_struct() |> Jason.encode!() |> Jason.decode!()
+               "params" => "nil",
+               "session" => "nil"
+             } = payload |> Map.from_struct() |> :json.encode() |> IO.iodata_to_binary() |> :json.decode()
     end
 
     test "with all options" do
@@ -86,7 +76,7 @@ defmodule JasonOnlyAppTest do
                )
 
       assert %{
-               "apiKey" => nil,
+               "apiKey" => "nil",
                "context" => %{"environment" => _, "hostname" => _, "foo" => 5},
                "environment" => %{"foo" => 5555},
                "errors" => [
@@ -106,7 +96,7 @@ defmodule JasonOnlyAppTest do
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}
-             } = payload |> Map.from_struct() |> Jason.encode!() |> Jason.decode!()
+             } = payload |> Map.from_struct() |> :json.encode() |> IO.iodata_to_binary() |> :json.decode()
     end
   end
 end

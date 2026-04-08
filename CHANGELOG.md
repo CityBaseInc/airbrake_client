@@ -1,5 +1,126 @@
 # Changelog
 
+## v2.3.0-rc.0 (2026-03)
+
+The v2.3.0 release makes configuration and JSON encoding much better and less
+risky.
+
+**Config validator:**  We now have a validator which checks the application
+config to make sure that it has everything it needs, doesn't have things it
+doesn't need, and that the config values are acceptable. If something is broken,
+_the worker will fail to start_, and your app will crash.
+
+Breaking changes:
+* Unknown config keys cause validation to fail; previously they were silently
+  ignored.
+* `api_key` and `project_id` are required. You might need to set them in `dev`
+  and `test` environments.
+* Config values are type-checked. Validation fails if a value has the wrong
+  shape:
+    * `:api_key` — string, `{:system, var}`, or `{:system, var, default}`
+    * `:project_id` — integer, integer-parseable string, `{:system, var}`, or
+      `{:system, var, default}`
+    * `:host` — string, `{:system, var}`, or `{:system, var, default}`
+    * `:context_environment` (and `:environment`) — string, atom, `{:system,
+      var}`, or 0-arity function
+    * `:ignore` — `nil`, `:all`, a `MapSet`, or a 2-arity function
+    * `:options` — keyword list or `{mod, fun, 1}` tuple
+    * `:session` — `:include_logger_metadata` or `nil`
+    * `:filter_parameters` — list of strings
+    * `:filter_headers` — list of strings
+    * `:production_aliases` — list of strings
+    * `:json_encoder` — module
+    * `:payload_processor` — module that is loaded and implements
+      `process_params/2`, `process_headers/2`, and `encode!/1`
+    * `:private` — keyword list
+* If no `:payload_processor` is configured, the `:json_encoder` module
+  (defaulting to `Poison`) must be loadable.
+
+The validator will also output warnings to stderr. It is recommended that you
+watch your app's output careful the first time you deploy an app after updating
+`airbrake_client`.
+
+**Payload processor:** significant improvements have been made to filtering
+params and headers and to JSON encoding the whole payload.
+
+`Airbrake.PayloadProcessor` is a behaviour with three functions:
+
+* `c:Airbrake.PayloadProcessor.process_params/2` turns the value for
+  `notice.params` into something that should be encodable as a JSON string. It
+  also filters out sensitive data.
+* `c:Airbrake.PayloadProcessor.process_headers/2` filters sensitive data from
+  HTTP headers found at `notice.environment.headers`.
+* `c:Airbrake.PayloadProcessor.encode!/1` calls a JSON encoder.
+
+You specify a _payload processor_ with the `:payload_processor` option in the
+config, replacing the `:json_encoder` option. `airbrake_client` comes with
+payload processors that you can use immediately:
+`Airbrake.PoisonPayloadProcessor`, `Airbrake.JasonPayloadProcessor`,
+`Airbrake.JsonPayloadProcessor`.
+
+See ["Payload Processor"](payload_processor.html) and the modules for more
+details.
+
+**Internal errors and exceptions:** internal errors that are raised (or thrown)
+are now processed internally so that the worker process doesn't crash. There are
+two levels:
+* If the worker process raises an error, the error is caught, and a very generic
+  notice is posted to Airbrake.
+    * The notice is generic so that posting the second notice is very likely to
+      succeed.
+* If posting the generic notice to Airbrake raises an error, the error is caught
+  and a simple warning is output to stderr.
+
+We cannot use `Logger` because the logger backend might trigger posting another
+notice to Airbrake and we'd end up in an infinite loop of errors.
+
+### Enhancements
+
+  * [Airbrake.Test] Add `airbrake_post_mock_fun/1` to return a function that
+    implements an expectation for the `HTTPoison.Base.post/3` call to post a
+    notice. See `Airbrake.Test` for more information and an example.
+  * [Airbrake.Utils] Associative lists (including keyword lists) are now
+    filtered by key in `Airbrake.Utils.filter/2`, matching atom keys as strings
+    against the filtered attributes list.
+  * [Airbrake.PayloadProcessor] Add `Airbrake.PayloadProcessor` behaviour with
+    callbacks to process a notice payload posted to Airbrake.
+  * [Airbrake.PoisonPayloadProcessor] Add `Airbrake.PayloadProcessor`
+    implementation for Poison. Conditionally compiled when Poison is available.
+  * [Airbrake.JasonPayloadProcessor] Add `Airbrake.PayloadProcessor`
+    implementation for Jason. Conditionally compiled when Jason is available.
+  * [Airbrake.JsonPayloadProcessor] Add `Airbrake.PayloadProcessor`
+    implementation for Erlang's `:json`. Conditionally compiled when `:json` is
+    available (OTP 27+).
+  * [Airbrake.Config] Add `payload_processor/1` to resolve the configured
+    `Airbrake.PayloadProcessor` module, with fallback from `:json_encoder`.
+  * [Airbrake.Config] Allow the `:project_id` option to be an integer or a
+    string containing an integer.
+  * [Airbrake.Config.Validator] Add validation before the `airbrake_client`
+    process is started. Shows warnings for deprecated options.
+  * [Airbrake.Utils] Make the module public with documentation; use to write
+    your own payload processors.
+
+### Deprecations
+
+  * [Airbrake] `Airbrake.destruct/1` and `Airbrake.detuple/1` are deprecated;
+    use same functions in `Airbrake.Utils`.
+  * [Airbrake.Config.Validator] `:json_encoder` config key is deprecated; use
+    `:payload_processor` instead.
+  * [Airbrake.Config.Validator] `:environment` config key is deprecated; use
+    `:context_environment` instead.
+
+### Bug fixes
+
+  * [Airbrake.PayloadTest] Fix fragile assertion on `UndefinedFunctionError`
+    message that varied across Elixir/OTP versions.
+  * [Airbrake.Plug] Handle IPv4 _and_ IPv6 addresses for the `userIP` in the
+    context of a notice.
+  * [Airbrake] Fix return type of `report/2` and `remember/2`.
+  * [Airbrake.Utils] Update `Airbrake.Utils.filter/2` to recurse on tuples.
+  * [Airbrake.Payload] Removed derived implementation of `Jason.Encoder` because
+    the derived encoder did not work.
+
+
 ## v2.2.1 (2025-01-04)
 
 ### Bug fixes
@@ -20,13 +141,13 @@
 * New JSON encoder protections:
     * If the JSON encoder module does not exist at compile time, the library
       will compile with an error.
-    * If the JSON encoder module does not exist when `Airbrake.Worker` is
-      started, the process will not start.
+    * If the JSON encoder module does not exist when
+      `Airbrake.Worker` is started, the process will not start.
     * If the JSON encoder module _does_ exist but does not define `encode!/1`
       when a report is made, a warning will be output to stderr and a _very_
       simple Airbrake notice about the missing `encode!/1` function _will_ be
-      sent.  Previously, the `Airbrake.Worker` would crash and take the app down
-      with it without sending any Airbrake notices.
+      sent.  Previously, the `Airbrake.Worker` would crash and take
+      the app down with it without sending any Airbrake notices.
 
 ## v2.1.0 (??????????)
 

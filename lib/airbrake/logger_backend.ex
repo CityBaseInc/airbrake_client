@@ -22,14 +22,17 @@ defmodule Airbrake.LoggerBackend do
 
   @behaviour :gen_event
 
+  @spec init({module(), atom()}) :: {:ok, nil}
   def init({__MODULE__, _name}) do
     {:ok, nil}
   end
 
+  @spec handle_call(term(), nil) :: {:ok, :ok, nil}
   def handle_call(_, state) do
     {:ok, :ok, state}
   end
 
+  @spec handle_event(term(), nil) :: {:ok, nil}
   def handle_event({_level, gl, _event}, state)
       when node(gl) != node() do
     {:ok, state}

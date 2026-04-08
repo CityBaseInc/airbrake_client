@@ -32,6 +32,7 @@ defmodule Airbrake.GenServer do
   Implements a set of reporting rules based on process termination reason.
   Could be overridden if you want to.
   """
+  @spec handle_terminate(term(), map()) :: nil | :ok | {:error, ArgumentError}
   def handle_terminate(reason, context)
   def handle_terminate(:normal, _), do: nil
   def handle_terminate(:shutdown, _), do: nil

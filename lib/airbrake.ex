@@ -15,6 +15,7 @@ defmodule Airbrake do
   alias Airbrake.Config.Validator
 
   @doc false
+  @spec start(Application.start_type(), term()) :: {:ok, pid()} | {:error, term()}
   def start(_type \\ :normal, _args \\ []) do
     with :ok <- Validator.validate() do
       children = [
@@ -123,6 +124,7 @@ defmodule Airbrake do
         String.upcase(nil)
       end) |> Airbrake.monitor
   """
+  @spec monitor(pid() | atom()) :: :ok
   defdelegate monitor(pid_or_reg_name), to: Airbrake.Worker
 
   @doc """
@@ -130,6 +132,7 @@ defmodule Airbrake do
   Airbrake report.
   """
   @deprecated "Use Airbrake.Utils.destruct/1."
+  @spec destruct(term()) :: term()
   defdelegate destruct(value), to: Airbrake.Utils
 
   @doc """
@@ -137,5 +140,6 @@ defmodule Airbrake do
   Airbrake report.
   """
   @deprecated "Use Airbrake.Utils.detuple/1."
+  @spec detuple(term()) :: term()
   defdelegate detuple(value), to: Airbrake.Utils
 end

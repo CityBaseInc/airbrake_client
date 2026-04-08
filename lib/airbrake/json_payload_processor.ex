@@ -10,6 +10,7 @@ if Code.ensure_loaded?(:json) do
     Destructures structs, filters sensitive keys, and converts tuples to lists.
     """
     @impl true
+    @spec process_params(term(), keyword()) :: term()
     def process_params(params, opts) do
       filter_params = Keyword.get(opts, :filtered_attributes, [])
 
@@ -23,6 +24,7 @@ if Code.ensure_loaded?(:json) do
     Delegates to `Airbrake.Utils.filter/2`.
     """
     @impl true
+    @spec process_headers(term(), keyword()) :: term()
     def process_headers(headers, opts) do
       filtered_attributes = Keyword.get(opts, :filtered_attributes, [])
       Airbrake.Utils.filter(headers, filtered_attributes)
@@ -32,6 +34,7 @@ if Code.ensure_loaded?(:json) do
     Encodes the payload to a JSON string using `:json.encode/1`.
     """
     @impl true
+    @spec encode!(term()) :: String.t()
     def encode!(payload) do
       payload |> :json.encode() |> IO.iodata_to_binary()
     end

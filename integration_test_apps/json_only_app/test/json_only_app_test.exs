@@ -3,6 +3,8 @@ defmodule JsonOnlyAppTest do
 
   alias Airbrake.Payload
 
+  @airbrake_client_version Application.spec(:airbrake_client, :vsn) |> to_string()
+
   test "Jason is undefined" do
     refute Code.ensure_compiled(Jason) == {:module, Jason}
   end
@@ -43,7 +45,7 @@ defmodule JsonOnlyAppTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.1"
+                 "version" => @airbrake_client_version
                },
                "params" => "nil",
                "session" => "nil"
@@ -92,7 +94,7 @@ defmodule JsonOnlyAppTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.1"
+                 "version" => @airbrake_client_version
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}

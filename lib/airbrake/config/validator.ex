@@ -29,6 +29,7 @@ defmodule Airbrake.Config.Validator do
 
   Returns `:ok` if valid, or `{:error, reasons}` with a list of error strings.
   """
+  @spec validate(keyword()) :: :ok | {:error, [String.t()]}
   def validate(config \\ Application.get_all_env(:airbrake_client)) do
     check_deprecations(config)
 

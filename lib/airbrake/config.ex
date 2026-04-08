@@ -26,6 +26,7 @@ defmodule Airbrake.Config do
   environment variable values.
   """
   @impl Airbrake.Config.Behaviour
+  @spec get(atom(), term()) :: term()
   def get(key, default \\ nil) do
     :airbrake_client
     |> Application.get_env(key, default)
@@ -39,6 +40,7 @@ defmodule Airbrake.Config do
   `hostname/0`. Values in `:production_aliases` are mapped to `"production"`.
   """
   @impl Airbrake.Config.Behaviour
+  @spec context_environment(module()) :: String.t()
   def context_environment(config \\ __MODULE__) do
     config_context_environment =
       case config.get(:context_environment) || config.get(:environment) do
@@ -62,6 +64,7 @@ defmodule Airbrake.Config do
   to `Airbrake.PoisonPayloadProcessor`.
   """
   @impl Airbrake.Config.Behaviour
+  @spec payload_processor(module()) :: module()
   def payload_processor(config \\ __MODULE__) do
     case config.get(:payload_processor) do
       nil -> payload_processor_from_json_encoder(config)
@@ -75,6 +78,7 @@ defmodule Airbrake.Config do
   Converts a string value to an integer if necessary.
   """
   @impl Airbrake.Config.Behaviour
+  @spec project_id(module()) :: integer()
   def project_id(config \\ __MODULE__) do
     case config.get(:project_id) do
       value when is_binary(value) -> String.to_integer(value)
@@ -96,6 +100,7 @@ defmodule Airbrake.Config do
   Uses the `HOST` environment variable, falling back to the system hostname.
   """
   @impl Airbrake.Config.Behaviour
+  @spec hostname() :: String.t()
   def hostname do
     System.get_env("HOST") || to_string(elem(:inet.gethostname(), 1))
   end

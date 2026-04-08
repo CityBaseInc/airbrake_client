@@ -27,6 +27,7 @@ defmodule Airbrake.Payload do
             params: nil,
             session: nil
 
+  @spec new(Exception.t() | [type: String.t(), message: String.t()], Exception.stacktrace(), keyword()) :: t()
   def new(exception, stacktrace, opts \\ [])
 
   def new(%{__exception__: true} = exception, stacktrace, opts) do

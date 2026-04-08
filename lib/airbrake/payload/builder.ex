@@ -3,6 +3,7 @@ defmodule Airbrake.Payload.Builder do
 
   alias Airbrake.Payload.Backtrace
 
+  @spec build_error(keyword(), Exception.stacktrace()) :: map()
   def build_error(exception, stacktrace) do
     %{
       type: exception[:type],
@@ -11,6 +12,7 @@ defmodule Airbrake.Payload.Builder do
     }
   end
 
+  @spec build(:context | :environment | :params | :session, keyword()) :: map() | nil
   def build(:context, opts) do
     config = get_config(opts)
 
@@ -58,10 +60,12 @@ defmodule Airbrake.Payload.Builder do
       else: full_session
   end
 
+  @spec filter_environment(nil) :: nil
   def filter_environment(nil) do
     nil
   end
 
+  @spec filter_environment(map(), keyword()) :: map()
   def filter_environment(environment, opts) do
     config = get_config(opts)
     filtered_attributes = config.get(:filter_headers, [])

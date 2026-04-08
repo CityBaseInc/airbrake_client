@@ -42,6 +42,7 @@ defmodule Airbrake.Utils do
       iex> Airbrake.Utils.filter(%{"password" => "secret"}, nil)
       %{"password" => "secret"}
   """
+  @spec filter(term(), [String.t()] | nil) :: term()
   def filter(input, filtered_attributes)
 
   def filter(input, nil) do
@@ -86,6 +87,7 @@ defmodule Airbrake.Utils do
       iex> Airbrake.Utils.filter_key_value({:name, "Alice"}, ["password"])
       {"name", "Alice"}
   """
+  @spec filter_key_value({term(), term()}, [String.t()]) :: {term(), term()}
   def filter_key_value({k, v}, filtered_attributes) when is_atom(k) do
     filter_key_value({Atom.to_string(k), v}, filtered_attributes)
   end
@@ -114,6 +116,7 @@ defmodule Airbrake.Utils do
       iex> Airbrake.Utils.detuple({:ok, "hello"})
       [:ok, "hello"]
   """
+  @spec detuple(term()) :: term()
   def detuple(%module{} = struct) do
     fields = struct |> Map.from_struct() |> detuple()
     struct(module, fields)
@@ -151,6 +154,7 @@ defmodule Airbrake.Utils do
       iex> Airbrake.Utils.destruct(%{a: {1, 2}})
       %{a: {1, 2}}
   """
+  @spec destruct(term()) :: term()
   def destruct(%_module{} = struct) do
     struct |> Map.from_struct() |> destruct()
   end

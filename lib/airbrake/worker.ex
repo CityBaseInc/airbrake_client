@@ -7,6 +7,12 @@ defmodule Airbrake.Worker do
 
   defmodule State do
     @moduledoc false
+
+    @type t :: %__MODULE__{
+            refs: %{optional(reference()) => pid() | atom()},
+            last_exception: {keyword(), keyword()} | nil
+          }
+
     defstruct refs: %{}, last_exception: nil
   end
 
@@ -52,26 +58,32 @@ defmodule Airbrake.Worker do
     {:error, ArgumentError}
   end
 
+  @spec monitor(pid() | atom()) :: :ok
   def monitor(pid_or_reg_name) do
     GenServer.cast(@name, {:monitor, pid_or_reg_name})
   end
 
+  @spec start_link() :: GenServer.on_start()
   def start_link do
     start_link([])
   end
 
+  @spec start_link(list()) :: GenServer.on_start()
   def start_link([]) do
     GenServer.start_link(@name, %State{}, name: @name)
   end
 
+  @spec exception_info(Exception.t()) :: [type: String.t(), message: String.t()]
   def exception_info(exception) do
     [type: inspect(exception.__struct__), message: Exception.message(exception)]
   end
 
+  @spec init(State.t()) :: {:ok, State.t()}
   def init(state) do
     {:ok, state}
   end
 
+  @spec handle_cast(term(), State.t()) :: {:noreply, State.t()}
   def handle_cast({:report, exception, stacktrace, options}, %{last_exception: {exception, details}} = state) do
     enhanced_options =
       Enum.reduce([:context, :params, :session, :env], options, fn key, enhanced_options ->
@@ -98,6 +110,7 @@ defmodule Airbrake.Worker do
     {:noreply, state}
   end
 
+  @spec handle_info(term(), State.t()) :: {:noreply, State.t()}
   def handle_info({:DOWN, ref, :process, pid, reason}, state) do
     {pname, refs} = Map.pop(state.refs, ref)
     Airbrake.GenServer.handle_terminate(reason, %{process_name: process_name(pname, pid)})
@@ -119,6 +132,7 @@ defmodule Airbrake.Worker do
   defp process_name(pname, pid), do: "#{inspect(pname)} [#{inspect(pid)}]"
 
   @deprecated "Use Airbrake.Config.get/2 instead."
+  @spec get_env(atom(), term()) :: term()
   def get_env(key, default \\ nil),
     do: Config.get(key, default)
 end

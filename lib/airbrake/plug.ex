@@ -5,14 +5,13 @@ defmodule Airbrake.Plug do
   To use this plug, add it to your router:
 
   ```elixir
-  defmodule YourApp.Router do
+  defmodule MyApp.Router do
     use Phoenix.Router
-    use Airbrake.Plug
+    use Airbrake.Plug # <- put this line in your router
+
     # ...
   end
   ```
-
-  See the [README](readme.html) for configuration options.
   """
 
   defmacro __using__(_env) do

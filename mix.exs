@@ -83,7 +83,17 @@ defmodule Airbrake.Mixfile do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md", "CHANGELOG.md"]
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "guides/payload_processor.md",
+        "guides/ignoring_errors.md",
+        "guides/shared_options.md",
+        "guides/context_environment.md",
+        "guides/session.md",
+        "guides/developing.md",
+        "guides/migrating.md"
+      ]
     ]
   end
 

@@ -1,10 +1,19 @@
 defmodule Airbrake.GenServer do
   @moduledoc """
-  This module provides the ability to monitor workers of your gen.servers,
-  just write `use Airbrake.GenServer` instead of `use GenServer`
-  and any time when GenServer would be terminated for a some reason you will know about it.
+  This module provides the ability to monitor workers of a `GenServer`.
 
-  Could be used in case when you don't want a system-wide reporting.
+  Use `Airbrake.GenServer` instead of `GenServer`. A notice will be posted if
+  the process terminates abnormally.
+
+  ## Example
+
+  ```elixir
+  defmodule MyServer do
+    use Airbrake.GenServer
+
+    # ...
+  end
+  ```
   """
 
   defmacro __using__(_opts) do

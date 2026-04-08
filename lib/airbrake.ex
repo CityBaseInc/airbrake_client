@@ -30,48 +30,78 @@ defmodule Airbrake do
   def report(exception, options \\ [])
 
   @doc """
-  Send a report to Airbrake about given exception.
+  Posts a notice to Airbrake about one exception.
 
   `exception` could be Exception.t or a keywords list with two keys :type & :message
 
-  `options` is a keywords list with following keys:
-    * :params - use it to pass request params
-    * :context - use it to pass detailed information about the exceptional situation
-    * :session - use it to pass info about user session
-    * :env - use it to pass environment variables, headers and so on
-    * :stacktrace - use it when you would like send something different than System.stacktrace
+  `options` is a keywords list with following options that related to the fields
+  of an [Airbrake
+  notice](https://docs.airbrake.io/docs/devops-tools/api/#create-notice-v3):
+    * :params - use it to pass request params for `notice.errors[0].params`.
+    * :context - use it to pass context information for `notice.context`.
+    * :session - use it to pass information about the user session for
+      `notice.session`.
+    * :env - use it to pass environment variables and HTTP headers for
+      `notice.environment`.
+    * :stacktrace - use it when you would like your own stack trace for
+      `notice.errors[0].backtrace`
 
-  This function will always return `:ok` right away and perform the reporting of the given exception in the background.
+  This function will always return `:ok` right away and perform the reporting of
+  the given exception in the background.
+
+  ## JSON Encoding
+
+  Be very careful of the values that you add to a notice. `jason` and `poison`
+  do not encode everything out of the box, so keep yourself to maps, lists, and
+  simple scalars for all values except for `:params`.
+
+  The value of `:params` is processed by
+  `c:Airbrake.PayloadProcessor.process_params/2` which should do it's best to
+  make an Elixir term into something encodable. The default implementations turn
+  tuples, structs and keyword lists into encodable terms (e.g., a struct into a
+  map). It also filters keys in maps and associative lists for sensitive data.
+  See the documentation for `c:Airbrake.PayloadProcessor.process_params/2`, the
+  documentation for `Airbrake.PayloadProcessor`, and ["Payload
+  Processor"](payload_processor.html) for more information.
 
   ## Examples
+
+  In each example, you can add any of the options listed above as a second
+  argument.
+
   Exceptions can be reported directly:
-      Airbrake.report(ArgumentError.exception("oops"))
-      #=> :ok
+
+  ```elixir
+  Airbrake.report(ArgumentError.exception("oops"))
+  ```
+
   Often, you'll want to report something you either rescued or caught.
 
   For rescued exceptions:
-      try do
-        raise ArgumentError, "oops"
-      rescue
-        exception ->
-          Airbrake.report(exception)
-          # You can also reraise the exception here with reraise/2
-      end
-  For caught exceptions:
-      try do
-        throw(:oops)
-        # or exit(:oops)
-      catch
-        kind, value ->
-          Airbrake.report([type: kind, message: inspect(value)])
-      end
-  Using custom data:
-      Airbrake.report(
-        [type: "DebugInfo", message: "Something went wrong"],
-        context: %{
-          moon_phase: "eclipse"
-        })
 
+  ```elixir
+  try do
+    # might raise an error...
+  rescue
+    exception -> Airbrake.report(exception)
+  end
+  ```
+
+  For caught exceptions:
+
+  ```elixir
+  try do
+    # might throw an error...
+  catch
+    kind, value -> Airbrake.report([type: kind, message: inspect(value)])
+  end
+  ```
+
+  Building a notice:
+
+  ```elixir
+  Airbrake.report([type: "DebugInfo", message: "Something went wrong"])
+  ```
   """
   defdelegate report(exception, options), to: Airbrake.Worker
 
@@ -99,11 +129,13 @@ defmodule Airbrake do
   Recursively turns structs into plain maps.  Use this to clean up data for an
   Airbrake report.
   """
+  @deprecated "Use Airbrake.Utils.destruct/1."
   defdelegate destruct(value), to: Airbrake.Utils
 
   @doc """
   Recursively turns tuples into lists.  Use this to clean up data for an
   Airbrake report.
   """
+  @deprecated "Use Airbrake.Utils.detuple/1."
   defdelegate detuple(value), to: Airbrake.Utils
 end

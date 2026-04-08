@@ -19,9 +19,6 @@ defmodule Airbrake.Payload do
     url: Airbrake.Mixfile.project()[:package][:links][:github]
   }
 
-  if Code.ensure_loaded?(Jason.Encoder),
-    do: @derive(Jason.Encoder)
-
   defstruct apiKey: nil,
             context: nil,
             environment: nil,

@@ -7,6 +7,7 @@ defmodule Airbrake.Payload.BuilderTest do
 
   alias Airbrake.Payload.Builder
 
+  setup :set_mox_from_context
   setup :verify_on_exit!
 
   describe "build/1 :context" do
@@ -137,6 +138,7 @@ defmodule Airbrake.Payload.BuilderTest do
                 headers = Map.merge(headers1, headers2) do
         # filter keys in headers1
         stub(MockConfig, :get, fn :filter_headers, _ -> Map.keys(headers1) end)
+        stub(MockConfig, :payload_processor, fn -> Airbrake.PoisonPayloadProcessor end)
 
         opts = [
           config: MockConfig,
@@ -181,6 +183,7 @@ defmodule Airbrake.Payload.BuilderTest do
                 params = Map.merge(params1, params2) do
         # filter keys in params1
         stub(MockConfig, :get, fn :filter_parameters, _ -> Map.keys(params1) end)
+        stub(MockConfig, :payload_processor, fn -> Airbrake.PoisonPayloadProcessor end)
 
         opts = [
           config: MockConfig,
@@ -275,6 +278,43 @@ defmodule Airbrake.Payload.BuilderTest do
 
     defp session_does_not_includes_metadata do
       stub(MockConfig, :get, fn :session -> nil end)
+    end
+  end
+
+  describe "filter_environment/2 with payload_processor" do
+    test "uses the configured payload processing module for string headers" do
+      stub(MockConfig, :get, fn :filter_headers, _ -> ["authorization"] end)
+      stub(MockConfig, :payload_processor, fn -> Airbrake.MockPayloadProcessor end)
+
+      stub(Airbrake.MockPayloadProcessor, :process_headers, fn _headers, _opts ->
+        {:filtered, "from MockPayloadProcessor"}
+      end)
+
+      result = Builder.filter_environment(%{"headers" => %{"authorization" => "Bearer token"}}, config: MockConfig)
+
+      assert result == %{"headers" => {:filtered, "from MockPayloadProcessor"}}
+    end
+
+    test "uses the configured payload processing module for atom headers" do
+      stub(MockConfig, :get, fn :filter_headers, _ -> ["authorization"] end)
+      stub(MockConfig, :payload_processor, fn -> Airbrake.MockPayloadProcessor end)
+
+      stub(Airbrake.MockPayloadProcessor, :process_headers, fn _headers, _opts ->
+        {:filtered, "from MockPayloadProcessor"}
+      end)
+
+      result = Builder.filter_environment(%{headers: %{"authorization" => "Bearer token"}}, config: MockConfig)
+
+      assert result == %{headers: {:filtered, "from MockPayloadProcessor"}}
+    end
+
+    test "uses JasonPayloadProcessor when configured" do
+      stub(MockConfig, :get, fn :filter_headers, _ -> ["authorization"] end)
+      stub(MockConfig, :payload_processor, fn -> Airbrake.JasonPayloadProcessor end)
+
+      result = Builder.filter_environment(%{"headers" => %{"authorization" => "Bearer token"}}, config: MockConfig)
+
+      assert result == %{"headers" => %{"authorization" => "[FILTERED]"}}
     end
   end
 end

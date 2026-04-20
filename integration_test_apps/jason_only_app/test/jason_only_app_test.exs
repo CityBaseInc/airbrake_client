@@ -1,11 +1,27 @@
 defmodule JasonOnlyAppTest do
   use ExUnit.Case
 
+  alias Airbrake.Config.Validator
   alias Airbrake.Payload
+
+  @airbrake_client_version Application.spec(:airbrake_client, :vsn) |> to_string()
 
   test "Poison is undefined" do
     # There is no conditional compilation for `poison`... yet.
     refute Code.ensure_compiled(Poison) == {:module, Poison}
+  end
+
+  describe "Config.Validator" do
+    test "accepts JasonPayloadProcessor" do
+      assert :ok = Validator.validate(api_key: "key", project_id: 1, payload_processor: Airbrake.JasonPayloadProcessor)
+    end
+
+    test "rejects PoisonPayloadProcessor because Poison is not available" do
+      assert {:error, errors} =
+               Validator.validate(api_key: "key", project_id: 1, payload_processor: Airbrake.PoisonPayloadProcessor)
+
+      assert ":payload_processor module Airbrake.PoisonPayloadProcessor is not available" in errors
+    end
   end
 
   describe "Jason encoding" do
@@ -39,11 +55,11 @@ defmodule JasonOnlyAppTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.1"
+                 "version" => @airbrake_client_version
                },
                "params" => nil,
                "session" => nil
-             } = payload |> Jason.encode!() |> Jason.decode!()
+             } = payload |> Map.from_struct() |> Jason.encode!() |> Jason.decode!()
     end
 
     test "with all options" do
@@ -88,11 +104,11 @@ defmodule JasonOnlyAppTest do
                "notifier" => %{
                  "name" => "Airbrake Client",
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
-                 "version" => "2.2.1"
+                 "version" => @airbrake_client_version
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}
-             } = payload |> Jason.encode!() |> Jason.decode!()
+             } = payload |> Map.from_struct() |> Jason.encode!() |> Jason.decode!()
     end
   end
 end

@@ -15,8 +15,6 @@ defmodule Airbrake.Channel do
     # ...
   end
   ```
-
-  See the [README](readme.html) for configuration options.
   """
 
   defmacro __using__(_env) do

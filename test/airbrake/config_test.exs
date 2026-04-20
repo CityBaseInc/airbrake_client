@@ -2,11 +2,12 @@ defmodule Airbrake.ConfigTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
 
-  alias Airbrake.Config
-
   import Airbrake.Test.DataGenerator
   import Mox
 
+  alias Airbrake.Config
+
+  setup :set_mox_from_context
   setup :verify_on_exit!
 
   describe "context_environment/0" do
@@ -60,6 +61,71 @@ defmodule Airbrake.ConfigTest do
 
         assert Config.context_environment(MockConfig) == context_environment
       end
+    end
+  end
+
+  describe "payload_processor/1" do
+    test "returns the module when :payload_processor is set" do
+      MockConfig
+      |> stub(:get, fn :payload_processor -> Airbrake.JasonPayloadProcessor end)
+
+      assert Config.payload_processor(MockConfig) == Airbrake.JasonPayloadProcessor
+    end
+
+    test "falls back to Jason module when :json_encoder is Jason" do
+      MockConfig
+      |> stub(:get, fn
+        :payload_processor -> nil
+        :json_encoder -> Jason
+      end)
+
+      assert Config.payload_processor(MockConfig) == Airbrake.JasonPayloadProcessor
+    end
+
+    test "falls back to Json module when :json_encoder is :json" do
+      MockConfig
+      |> stub(:get, fn
+        :payload_processor -> nil
+        :json_encoder -> :json
+      end)
+
+      assert Config.payload_processor(MockConfig) == Airbrake.JsonPayloadProcessor
+    end
+
+    test "falls back to Poison module when :json_encoder is Poison" do
+      MockConfig
+      |> stub(:get, fn
+        :payload_processor -> nil
+        :json_encoder -> Poison
+      end)
+
+      assert Config.payload_processor(MockConfig) == Airbrake.PoisonPayloadProcessor
+    end
+
+    test "defaults to Poison module when neither is configured" do
+      MockConfig
+      |> stub(:get, fn
+        :payload_processor -> nil
+        :json_encoder -> nil
+      end)
+
+      assert Config.payload_processor(MockConfig) == Airbrake.PoisonPayloadProcessor
+    end
+  end
+
+  describe "project_id/1" do
+    test "returns integer project_id unchanged" do
+      MockConfig
+      |> stub(:get, fn :project_id -> 12_345 end)
+
+      assert Config.project_id(MockConfig) == 12_345
+    end
+
+    test "converts string project_id to integer" do
+      MockConfig
+      |> stub(:get, fn :project_id -> "12345" end)
+
+      assert Config.project_id(MockConfig) == 12_345
     end
   end
 

@@ -1,9 +1,11 @@
 defmodule Airbrake.Payload.Backtrace do
   @moduledoc false
 
+  @spec from_stacktrace(Exception.stacktrace() | [String.t()]) :: [map()]
   def from_stacktrace(stacktrace),
     do: Enum.map(stacktrace, &from_stacktrace_entry/1)
 
+  @spec from_stacktrace_entry(tuple() | String.t()) :: map()
   def from_stacktrace_entry({module, function, args, opts}) do
     file = Keyword.get(opts, :file, ~c"unknown")
     line = Keyword.get(opts, :line, 0)
@@ -33,6 +35,7 @@ defmodule Airbrake.Payload.Backtrace do
     end
   end
 
+  @spec format_module(module()) :: String.t()
   def format_module(module) do
     string = Atom.to_string(module)
     if String.starts_with?(string, "Elixir."), do: string, else: ":#{string}"

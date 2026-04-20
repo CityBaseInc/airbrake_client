@@ -12,18 +12,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - elixir: '1.12'
-            otp: '24'
-          - elixir: '1.13'
-            otp: '24'
-          - elixir: '1.13'
-            otp: '25'
-          - elixir: '1.14'
-            otp: '24'
-          - elixir: '1.14'
-            otp: '25'
-          - elixir: '1.14'
-            otp: '26'
           - elixir: '1.15'
             otp: '24'
           - elixir: '1.15'
@@ -36,6 +24,12 @@ jobs:
             otp: '25'
           - elixir: '1.16'
             otp: '26'
+          - elixir: '1.17'
+            otp: '27'
+          - elixir: '1.18'
+            otp: '27'
+          - elixir: '1.19'
+            otp: '28'
     steps:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
@@ -62,8 +56,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '26'
-          elixir-version: '1.15'
+          otp-version: '28.1'
+          elixir-version: '1.19.1'
       - run: mix deps.get
       - run: mix test
 
@@ -77,8 +71,38 @@ jobs:
       - uses: actions/checkout@v4
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '26'
-          elixir-version: '1.15'
+          otp-version: '28.1'
+          elixir-version: '1.19.1'
+      - run: mix deps.get
+      - run: mix test
+
+  json_only_test:
+    runs-on: ubuntu-latest
+    name: Test - json only, no jason or poison
+    defaults:
+      run:
+        working-directory: integration_test_apps/json_only_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '28.1'
+          elixir-version: '1.19.1'
+      - run: mix deps.get
+      - run: mix test
+
+  default_processor_test:
+    runs-on: ubuntu-latest
+    name: Test - default payload processor
+    defaults:
+      run:
+        working-directory: integration_test_apps/default_processor_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: '28.1'
+          elixir-version: '1.19.1'
       - run: mix deps.get
       - run: mix test
 
@@ -89,8 +113,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - elixir: '1.15.6'
-            otp: '26.1.1'
+          - elixir: '1.19.1'
+            otp: '28.1'
     steps:
       - uses: actions/checkout@v4
       - name: Setup elixir
@@ -106,7 +130,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: _build
-          key: elixir-build-v1-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-${{ hashFiles('lib/**/*.ex', 'config/*.exs', 'mix.exs') }}
+          key: elixir-build-v2-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-${{ hashFiles('lib/**/*.ex', 'config/*.exs', 'mix.exs') }}
 
       - name: Compile Deps
         run: mix deps.compile
@@ -134,4 +158,4 @@ jobs:
     needs: [all_tests]
     runs-on: ubuntu-latest
     steps:
-      - run: echo "Elixir tests and static analyses completed succcessfully."
+      - run: echo "Elixir tests and static analyses completed successfully."

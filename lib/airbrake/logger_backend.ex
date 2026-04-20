@@ -1,16 +1,38 @@
 defmodule Airbrake.LoggerBackend do
-  @moduledoc false
+  @moduledoc """
+  A `Logger` backend to post an Airbrake notice when the logger gets an error
+  message.
+
+  If you are using [`logger_backends`](https://hex.pm/packages/logger_backends),
+  you can add `Airbrake.LoggerBackend` as a logger backend. Put this in the
+  `start/2` function of a module that implements the `Application` behaviour:
+
+  ```elixir
+  LoggerBackends.add({Airbrake.LoggerBackend, :error})
+  ```
+
+  For older versions of Elixir (before 1.15), you can configure it in a
+  `config/*.exs` file:
+
+  ```elixir
+  config :logger,
+    backends: [{Airbrake.LoggerBackend, :error}, :console]
+  ```
+  """
 
   @behaviour :gen_event
 
+  @spec init({module(), atom()}) :: {:ok, nil}
   def init({__MODULE__, _name}) do
     {:ok, nil}
   end
 
+  @spec handle_call(term(), nil) :: {:ok, :ok, nil}
   def handle_call(_, state) do
     {:ok, :ok, state}
   end
 
+  @spec handle_event(term(), nil) :: {:ok, nil}
   def handle_event({_level, gl, _event}, state)
       when node(gl) != node() do
     {:ok, state}

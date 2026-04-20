@@ -1,6 +1,8 @@
 defmodule Airbrake.Config do
   @moduledoc false
 
+  @behaviour Airbrake.Config.Behaviour
+
   defmodule Behaviour do
     @moduledoc false
 
@@ -11,20 +13,34 @@ defmodule Airbrake.Config do
     @callback context_environment :: String.t()
 
     @callback hostname :: String.t()
+
+    @callback payload_processor :: module()
+
+    @callback project_id :: integer()
   end
 
-  @behaviour Airbrake.Config.Behaviour
+  @doc """
+  Gets a value from the `:airbrake_client` config.
 
-  # Gets a value from the `:airbrake_client` config.
+  Resolves `{:system, var}` and `{:system, var, default}` tuples to their
+  environment variable values.
+  """
   @impl Airbrake.Config.Behaviour
+  @spec get(atom(), term()) :: term()
   def get(key, default \\ nil) do
     :airbrake_client
     |> Application.get_env(key, default)
     |> resolve()
   end
 
-  # Returns the name of the environment.
+  @doc """
+  Returns the name of the environment.
+
+  Checks `:context_environment`, then `:environment`, then falls back to
+  `hostname/0`. Values in `:production_aliases` are mapped to `"production"`.
+  """
   @impl Airbrake.Config.Behaviour
+  @spec context_environment(module()) :: String.t()
   def context_environment(config \\ __MODULE__) do
     config_context_environment =
       case config.get(:context_environment) || config.get(:environment) do
@@ -40,8 +56,51 @@ defmodule Airbrake.Config do
       else: config_context_environment
   end
 
-  # Returns a hostname.
+  @doc """
+  Returns the configured `Airbrake.PayloadProcessor` module.
+
+  When not set, falls back to `:json_encoder`, mapping it to the corresponding
+  module. If neither `:payload_processor` nor `:json_encoder` are set, defaults
+  to `Airbrake.PoisonPayloadProcessor`.
+  """
   @impl Airbrake.Config.Behaviour
+  @spec payload_processor(module()) :: module()
+  def payload_processor(config \\ __MODULE__) do
+    case config.get(:payload_processor) do
+      nil -> payload_processor_from_json_encoder(config)
+      mod when is_atom(mod) -> mod
+    end
+  end
+
+  @doc """
+  Returns the project ID as an integer.
+
+  Converts a string value to an integer if necessary.
+  """
+  @impl Airbrake.Config.Behaviour
+  @spec project_id(module()) :: integer()
+  def project_id(config \\ __MODULE__) do
+    case config.get(:project_id) do
+      value when is_binary(value) -> String.to_integer(value)
+      value -> value
+    end
+  end
+
+  defp payload_processor_from_json_encoder(config) do
+    case config.get(:json_encoder) do
+      Jason -> Airbrake.JasonPayloadProcessor
+      :json -> Airbrake.JsonPayloadProcessor
+      _ -> Airbrake.PoisonPayloadProcessor
+    end
+  end
+
+  @doc """
+  Returns a hostname.
+
+  Uses the `HOST` environment variable, falling back to the system hostname.
+  """
+  @impl Airbrake.Config.Behaviour
+  @spec hostname() :: String.t()
   def hostname do
     System.get_env("HOST") || to_string(elem(:inet.gethostname(), 1))
   end

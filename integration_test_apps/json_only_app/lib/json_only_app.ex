@@ -1,0 +1,2 @@
+defmodule JsonOnlyApp do
+end

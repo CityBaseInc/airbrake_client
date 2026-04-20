@@ -2,8 +2,8 @@ defmodule Airbrake.Payload.Builder do
   @moduledoc false
 
   alias Airbrake.Payload.Backtrace
-  alias Airbrake.Utils
 
+  @spec build_error(keyword(), Exception.stacktrace()) :: map()
   def build_error(exception, stacktrace) do
     %{
       type: exception[:type],
@@ -12,6 +12,7 @@ defmodule Airbrake.Payload.Builder do
     }
   end
 
+  @spec build(:context | :environment | :params | :session, keyword()) :: map() | nil
   def build(:context, opts) do
     config = get_config(opts)
 
@@ -34,10 +35,13 @@ defmodule Airbrake.Payload.Builder do
   end
 
   def build(:params, opts) do
-    case Keyword.get(opts, :params) do
-      nil -> nil
-      params -> params |> Enum.into(%{}) |> filter_parameters(opts)
-    end
+    config = get_config(opts)
+    processor = config.payload_processor()
+    filter_parameters = config.get(:filter_parameters, [])
+
+    opts
+    |> Keyword.get(:params)
+    |> processor.process_params(filtered_attributes: filter_parameters)
   end
 
   def build(:session, opts) do
@@ -56,29 +60,35 @@ defmodule Airbrake.Payload.Builder do
       else: full_session
   end
 
-  def filter_parameters(params, opts) do
-    filter_parameters = get_config(opts).get(:filter_parameters, [])
-
-    Utils.filter(params, filter_parameters)
-  end
-
+  @spec filter_environment(nil) :: nil
   def filter_environment(nil) do
     nil
   end
 
+  @spec filter_environment(map(), keyword()) :: map()
   def filter_environment(environment, opts) do
-    filter_headers = get_config(opts).get(:filter_headers, [])
+    config = get_config(opts)
+    filtered_attributes = config.get(:filter_headers, [])
+    processor = config.payload_processor()
 
     cond do
       Map.has_key?(environment, "headers") ->
-        Map.update!(environment, "headers", &Utils.filter(&1, filter_headers))
+        update_headers(environment, "headers", processor, filtered_attributes)
 
       Map.has_key?(environment, :headers) ->
-        Map.update!(environment, :headers, &Utils.filter(&1, filter_headers))
+        update_headers(environment, :headers, processor, filtered_attributes)
 
       true ->
         environment
     end
+  end
+
+  defp update_headers(environment, key, processor, filtered_attributes) do
+    Map.update!(
+      environment,
+      key,
+      &processor.process_headers(&1, filtered_attributes: filtered_attributes)
+    )
   end
 
   defp get_config(opts),

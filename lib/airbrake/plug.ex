@@ -5,14 +5,13 @@ defmodule Airbrake.Plug do
   To use this plug, add it to your router:
 
   ```elixir
-  defmodule YourApp.Router do
+  defmodule MyApp.Router do
     use Phoenix.Router
-    use Airbrake.Plug
+    use Airbrake.Plug # <- put this line in your router
+
     # ...
   end
   ```
-
-  See the [README](readme.html) for configuration options.
   """
 
   defmacro __using__(_env) do
@@ -25,7 +24,7 @@ defmodule Airbrake.Plug do
 
         conn_data = %{
           url: "#{conn.scheme}://#{conn.host}:#{conn.port}#{conn.request_path}",
-          userIP: conn.remote_ip |> Tuple.to_list() |> Enum.join("."),
+          userIP: conn.remote_ip |> :inet.ntoa() |> to_string(),
           userAgent: headers["user-agent"],
           cookies: conn.req_cookies
         }

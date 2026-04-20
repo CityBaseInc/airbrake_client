@@ -3,14 +3,21 @@ defmodule Airbrake.Payload do
 
   alias Airbrake.Payload.Builder
 
+  @type t :: %__MODULE__{
+          apiKey: String.t() | nil,
+          context: map() | nil,
+          environment: map() | nil,
+          errors: [map()] | nil,
+          notifier: map() | nil,
+          params: map() | nil,
+          session: map() | nil
+        }
+
   @notifier_info %{
     name: "Airbrake Client",
     version: Airbrake.Mixfile.project()[:version],
     url: Airbrake.Mixfile.project()[:package][:links][:github]
   }
-
-  if Code.ensure_loaded?(Jason.Encoder),
-    do: @derive(Jason.Encoder)
 
   defstruct apiKey: nil,
             context: nil,
@@ -20,6 +27,7 @@ defmodule Airbrake.Payload do
             params: nil,
             session: nil
 
+  @spec new(Exception.t() | [type: String.t(), message: String.t()], Exception.stacktrace(), keyword()) :: t()
   def new(exception, stacktrace, opts \\ [])
 
   def new(%{__exception__: true} = exception, stacktrace, opts) do

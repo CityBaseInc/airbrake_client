@@ -12,3 +12,10 @@ initial session data for the `session` field.
 If you set `:session` in `:options` config option, this value will be merged
 into the `Logger` metadata if you use `:include_logger_metadata`. For any
 duplicate keys, the `:options` setting has priority.
+
+## Filtering
+
+The `:filter_parameters` config option is applied to the whole `session`
+(Logger metadata and `:session` values), recursively, the same way it is applied
+to `params`.  Logger metadata often contains PII such as email addresses, so add
+those keys to `:filter_parameters` if you use `:include_logger_metadata`.

@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+### Enhancements
+
+  * [Airbrake.Payload] `:filter_parameters` is now applied to `notice.session`
+    (including Logger metadata from `session: :include_logger_metadata`) and
+    `notice.context`, recursively, in addition to `notice.params`. Top-level
+    keys keep their original type (atom or string).
+  * [Airbrake.Payload] All cookie values in `notice.context.cookies` are
+    replaced with `"[FILTERED]"` (cookie names are kept), and the `cookie`
+    request header in `notice.environment.headers` is always filtered.
+
+Behavior changes (to prevent PII and credentials from reaching Airbrake):
+  * Session and context values whose keys are in `:filter_parameters` now show
+    up as `"[FILTERED]"`. Nested maps and structs under the session or context
+    are converted to maps with string keys when `:filter_parameters` is
+    non-empty (the same as `params`).
+  * Cookie values and the `cookie` header are no longer visible in Airbrake.
+    There is no option to turn this off.
+
 ## v2.3.0-rc.0 (2026-03)
 
 The v2.3.0 release makes configuration and JSON encoding much better and less

@@ -19,6 +19,7 @@ defmodule Airbrake.Payload.BuilderTest do
         MockConfig
         |> stub(:context_environment, fn -> context_environment end)
         |> stub(:hostname, fn -> hostname end)
+        |> stub(:get, fn :filter_parameters, _ -> [] end)
 
         assert Builder.build(:context, opts) ==
                  %{environment: context_environment, hostname: hostname}
@@ -33,6 +34,7 @@ defmodule Airbrake.Payload.BuilderTest do
         MockConfig
         |> stub(:context_environment, fn -> context_environment end)
         |> stub(:hostname, fn -> hostname end)
+        |> stub(:get, fn :filter_parameters, _ -> [] end)
 
         opts = [
           config: MockConfig,
@@ -56,6 +58,7 @@ defmodule Airbrake.Payload.BuilderTest do
         MockConfig
         |> stub(:context_environment, fn -> context_environment end)
         |> stub(:hostname, fn -> hostname end)
+        |> stub(:get, fn :filter_parameters, _ -> [] end)
 
         opts = [
           config: MockConfig,
@@ -80,6 +83,7 @@ defmodule Airbrake.Payload.BuilderTest do
         MockConfig
         |> stub(:context_environment, fn -> context_environment end)
         |> stub(:hostname, fn -> hostname end)
+        |> stub(:get, fn :filter_parameters, _ -> [] end)
 
         opts = [
           config: MockConfig,
@@ -92,6 +96,85 @@ defmodule Airbrake.Payload.BuilderTest do
                  foo: foo
                }
       end
+    end
+  end
+
+  describe "build/1 :context filtering" do
+    setup do
+      MockConfig
+      |> stub(:context_environment, fn -> "test" end)
+      |> stub(:hostname, fn -> "test-host" end)
+
+      :ok
+    end
+
+    test "applies :filter_parameters to context, recursively, preserving top-level keys" do
+      stub(MockConfig, :get, fn :filter_parameters, _ -> ["email", "password"] end)
+
+      opts = [
+        config: MockConfig,
+        context: %{
+          email: "jane.doe@example.com",
+          url: "https://example.test/pay",
+          nested: %{"password" => "hunter2", "ok" => 1}
+        }
+      ]
+
+      assert Builder.build(:context, opts) == %{
+               environment: "test",
+               hostname: "test-host",
+               email: "[FILTERED]",
+               url: "https://example.test/pay",
+               nested: %{"password" => "[FILTERED]", "ok" => 1}
+             }
+    end
+
+    test "leaves context unchanged when :filter_parameters is empty" do
+      stub(MockConfig, :get, fn :filter_parameters, _ -> [] end)
+
+      opts = [config: MockConfig, context: %{email: "jane.doe@example.com"}]
+
+      assert Builder.build(:context, opts) == %{
+               environment: "test",
+               hostname: "test-host",
+               email: "jane.doe@example.com"
+             }
+    end
+
+    test "filters all cookie values by default, keeping cookie names" do
+      stub(MockConfig, :get, fn :filter_parameters, _ -> [] end)
+
+      opts = [
+        config: MockConfig,
+        context: %{cookies: %{"_app_session" => "fake-session-token", "tracking" => "abc123"}}
+      ]
+
+      assert %{cookies: %{"_app_session" => "[FILTERED]", "tracking" => "[FILTERED]"}} =
+               Builder.build(:context, opts)
+    end
+
+    test "filters cookie values under a string key and in an associative list" do
+      stub(MockConfig, :get, fn :filter_parameters, _ -> [] end)
+
+      opts = [config: MockConfig, context: %{"cookies" => [{"_app_session", "fake-session-token"}]}]
+
+      assert %{"cookies" => [{"_app_session", "[FILTERED]"}]} = Builder.build(:context, opts)
+    end
+
+    test "filters a non-map cookie value entirely" do
+      stub(MockConfig, :get, fn :filter_parameters, _ -> [] end)
+
+      opts = [config: MockConfig, context: %{cookies: "_app_session=fake-session-token"}]
+
+      assert %{cookies: "[FILTERED]"} = Builder.build(:context, opts)
+    end
+
+    test "keeps nil cookies as nil" do
+      stub(MockConfig, :get, fn :filter_parameters, _ -> [] end)
+
+      opts = [config: MockConfig, context: %{cookies: nil}]
+
+      assert %{cookies: nil} = Builder.build(:context, opts)
     end
   end
 
@@ -242,7 +325,9 @@ defmodule Airbrake.Payload.BuilderTest do
     end
 
     defp session_includes_metadata do
-      stub(MockConfig, :get, fn :session -> :include_logger_metadata end)
+      MockConfig
+      |> stub(:get, fn :session -> :include_logger_metadata end)
+      |> stub(:get, fn :filter_parameters, _ -> [] end)
     end
   end
 
@@ -277,7 +362,59 @@ defmodule Airbrake.Payload.BuilderTest do
     end
 
     defp session_does_not_includes_metadata do
-      stub(MockConfig, :get, fn :session -> nil end)
+      MockConfig
+      |> stub(:get, fn :session -> nil end)
+      |> stub(:get, fn :filter_parameters, _ -> [] end)
+    end
+  end
+
+  describe "build/1 :session filtering" do
+    test "applies :filter_parameters to Logger metadata and session, recursively" do
+      MockConfig
+      |> stub(:get, fn :session -> :include_logger_metadata end)
+      |> stub(:get, fn :filter_parameters, _ -> ["payer_email", "email_id", "password"] end)
+
+      opts = [
+        config: MockConfig,
+        logger_metadata: [payer_email: "jane.doe@example.com", request_id: "req-123"],
+        session: %{"email_id" => "john.roe@example.com", "user" => %{"password" => "hunter2", "id" => 42}}
+      ]
+
+      assert Builder.build(:session, opts) == %{
+               :payer_email => "[FILTERED]",
+               :request_id => "req-123",
+               "email_id" => "[FILTERED]",
+               "user" => %{"password" => "[FILTERED]", "id" => 42}
+             }
+    end
+
+    test "applies :filter_parameters to session without Logger metadata" do
+      MockConfig
+      |> stub(:get, fn :session -> nil end)
+      |> stub(:get, fn :filter_parameters, _ -> ["cashier_email"] end)
+
+      opts = [
+        config: MockConfig,
+        logger_metadata: [cashier_email: "jane.doe@example.com"],
+        session: %{cashier_email: "john.roe@example.com", till: 7}
+      ]
+
+      assert Builder.build(:session, opts) == %{cashier_email: "[FILTERED]", till: 7}
+    end
+  end
+
+  describe "filter_environment/2 cookie header" do
+    test "always filters the cookie header" do
+      stub(MockConfig, :get, fn :filter_headers, _ -> [] end)
+      stub(MockConfig, :payload_processor, fn -> Airbrake.PoisonPayloadProcessor end)
+
+      result =
+        Builder.filter_environment(
+          %{headers: %{"cookie" => "_app_session=fake-session-token", "accept" => "*/*"}},
+          config: MockConfig
+        )
+
+      assert result == %{headers: %{"cookie" => "[FILTERED]", "accept" => "*/*"}}
     end
   end
 

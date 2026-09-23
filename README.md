@@ -105,9 +105,17 @@ config :airbrake_client,
 See `Airbrake.Utils.filter/2` for details about filtering.
 
 * `:filter_parameters` - (list of strings) names of keys (strings or atoms) for
-  sensitive data such as passwords and tokens.
+  sensitive data such as passwords, tokens, and email addresses.  Applied to
+  `notice.params`, `notice.session` (including Logger metadata), and
+  `notice.context`.
 * `:filter_headers` - (list of strings) names of HTTP headers (strings or atoms)
-  to filter.
+  to filter.  The `cookie` header is always filtered.
+
+Cookie values in `notice.context.cookies` (set by `Airbrake.Plug`) are always
+replaced with `"[FILTERED]"`; the cookie names are kept.
+
+Matching is exact and case-sensitive, so list every spelling you use (for
+example, `"email"` and `"Email"`).
 * `:payload_processor` - (module, defaults to `Airbrake.PoisonPayloadProcessor`)
   * See the [Payload Processor](payload_processor.html) guide for more
     details.

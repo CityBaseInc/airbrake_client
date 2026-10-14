@@ -1,9 +1,17 @@
 # Changelog
 
-## v2.3.0-rc.0 (2026-03)
+## v3.0.0-rc.0 (2026-04-17)
 
-The v2.3.0 release makes configuration and JSON encoding much better and less
+The v3.0.0 release makes configuration and JSON encoding much better and less
 risky.
+
+This is a major version because the new config validator can stop an app from
+starting: unknown keys, a missing `api_key` or `project_id`, or a value of the
+wrong type now fail validation (see "Breaking changes" below). 3.0.0-rc.0 is
+meant to be an easy update: deprecated functions and config options still work
+and print warnings. A later release candidate, planned as 3.0.0-rc.1, will
+remove the deprecated functions and config options and raise the minimum Elixir
+version.
 
 **Config validator:**  We now have a validator which checks the application
 config to make sure that it has everything it needs, doesn't have things it

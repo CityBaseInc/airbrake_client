@@ -26,10 +26,14 @@ Add `airbrake_client` to your dependencies:
 ```elixir
 defp deps do
   [
-    {:airbrake_client, "~> 2.3"}
+    {:airbrake_client, "~> 3.0.0-rc"}
   ]
 end
 ```
+
+A requirement has to name the pre-release to match a release candidate
+(`"~> 3.0"` does not match `3.0.0-rc.0`). Use `"~> 3.0"` once 3.0.0 is
+released.
 
 
 ## Configuration
@@ -47,11 +51,26 @@ Only the `:api_key` and `:project_id` options are required.
 These options configure `:airbrake_client` to connect to the right project on
 Airbrake.io (or another host).
 
+`airbrake_client` checks its config when it starts, so `:api_key` and
+`:project_id` need values in every environment, including `dev` and `test`.
+`System.get_env/1` returns `nil` for an unset variable, and a `nil` value stops
+your app. Use placeholders where you don't need the real values (and set
+`ignore: :all` there; see "Ignoring exceptions" below), and read the real values
+in `config/runtime.exs`:
+
 ```elixir
+# config/config.exs
 config :airbrake_client,
-  api_key: System.get_env("AIRBRAKE_API_KEY"),
-  project_id: System.get_env("AIRBRAKE_PROJECT_ID"),
+  api_key: "placeholder",
+  project_id: 0,
   host: "https://api.airbrake.io"
+
+# config/runtime.exs
+if config_env() == :prod do
+  config :airbrake_client,
+    api_key: System.fetch_env!("AIRBRAKE_API_KEY"),
+    project_id: System.fetch_env!("AIRBRAKE_PROJECT_ID")
+end
 ```
 
 * `:api_key` - (**required**, binary) the token needed to access the [Airbrake
@@ -79,7 +98,7 @@ config :airbrake_client,
   environment; used to set `notice.context.environment`.  See ["Setting the
   Environment in the Context"](context_environment.html) for more details.
   * This was formerly `:environment` which is now deprecated and will be removed
-    in the next major release.
+    in a later 3.0 release candidate.
 * `:production_aliases` - (list of strings) a list of `"production"` aliases for
   the environment.
 * `:options` - (keyword list or function returning keyword list) values that are

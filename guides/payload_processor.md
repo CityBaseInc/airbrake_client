@@ -38,4 +38,5 @@ You can write your own payload processor if you like.  See the
 If set, `:payload_processor` is used, and `:json_encoder` (if set) is ignored.
 If you set `:json_encoder` instead of `:payload_processor`, the appropriate
 payload processor is used.  Any use of `:json_encoder` results in a warning that
-it is deprecated on start up.  It will be removed in the next major release.
+it is deprecated on start up.  It will be removed in a later 3.0 release
+candidate.

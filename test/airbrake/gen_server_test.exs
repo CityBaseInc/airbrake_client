@@ -11,7 +11,7 @@ defmodule Airbrake.GenServerTest do
   setup :verify_on_exit!
 
   setup do
-    Airbrake.start()
+    start_supervised!(Airbrake.Worker)
     :ok
   end
 

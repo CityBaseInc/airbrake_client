@@ -17,7 +17,7 @@ defmodule Airbrake.LoggerBackendTest do
     {:ok, _} = Application.ensure_all_started(:logger_backends)
     {:ok, _} = LoggerBackends.add({LoggerBackend, :error})
     on_exit(fn -> LoggerBackends.remove({LoggerBackend, :error}) end)
-    Airbrake.start()
+    start_supervised!(Airbrake.Worker)
     :ok
   end
 

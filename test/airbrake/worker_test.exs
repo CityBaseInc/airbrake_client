@@ -11,7 +11,7 @@ defmodule Airbrake.WorkerTest do
   setup :verify_on_exit!
 
   setup do
-    worker_pid = start_worker()
+    worker_pid = start_supervised!(Airbrake.Worker)
 
     {exception, stacktrace} =
       try do
@@ -19,8 +19,6 @@ defmodule Airbrake.WorkerTest do
       rescue
         exception -> {exception, __STACKTRACE__}
       end
-
-    on_exit(&maybe_stop_worker/0)
 
     [exception: exception, stacktrace: stacktrace, worker_pid: worker_pid]
   end
@@ -113,28 +111,4 @@ defmodule Airbrake.WorkerTest do
   end
 
   defp atomize_keys(other), do: other
-
-  defp start_worker do
-    start_result = Airbrake.Worker.start_link()
-
-    case start_result do
-      {:ok, worker_pid} -> worker_pid
-      {:error, {:already_started, worker_pid}} -> worker_pid
-    end
-  end
-
-  defp maybe_stop_worker do
-    pid_to_stop = GenServer.whereis(Airbrake.Worker)
-
-    case pid_to_stop do
-      nil -> :ok
-      _ -> stop_worker(pid_to_stop)
-    end
-  end
-
-  defp stop_worker(pid_to_stop) do
-    GenServer.stop(pid_to_stop, :normal, 1_000)
-  catch
-    :exit, _ -> :ok
-  end
 end

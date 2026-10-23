@@ -39,16 +39,9 @@ defmodule Airbrake.LoggerBackend do
   end
 
   def handle_event({:error, _, {Logger, msg, _ts, _metadata}}, state) do
-    try do
-      err_info = parse_error_message(msg)
-
-      Airbrake.report(err_info[:exception],
-        stacktrace: err_info[:stacktrace] || [],
-        context: err_info[:context]
-      )
-    rescue
-      # credo:disable-for-next-line
-      exception -> IO.inspect(exception)
+    case parse_error_message(msg) do
+      {:ok, exception, stacktrace, context} -> Airbrake.report(exception, stacktrace: stacktrace, context: context)
+      :error -> :ok
     end
 
     {:ok, state}
@@ -58,38 +51,45 @@ defmodule Airbrake.LoggerBackend do
     {:ok, state}
   end
 
+  # The exception is the last "** " line, and its backtrace is the frame lines right after it.
   defp parse_error_message(msg) do
-    msg
-    |> to_string
-    |> String.split("\n")
-    |> Enum.reverse()
-    |> Enum.reduce(%{stacktrace: [], context: %{}}, &parse_line/2)
+    reversed_lines = msg |> to_string() |> String.split("\n") |> Enum.reverse()
+
+    case Enum.split_while(reversed_lines, &(not exception_line?(&1))) do
+      {_, []} ->
+        :error
+
+      {reversed_after, [exception_line | reversed_before]} ->
+        {frames, rest} = reversed_after |> Enum.reverse() |> Enum.split_while(&frame_line?/1)
+        stacktrace = Enum.map(frames, &String.trim_leading/1)
+        context = parse_context(Enum.reverse(reversed_before) ++ rest)
+        {:ok, parse_exception(exception_line), stacktrace, context}
+    end
   end
 
-  defp parse_line("    " <> line, res), do: parse_line(line, res)
+  defp exception_line?(line), do: String.starts_with?(String.trim_leading(line), "** ")
 
-  defp parse_line("** " <> err_msg, res) do
+  # Matches "(app vsn) file:line: function", "(app vsn) function", and "file:line: function".
+  defp frame_line?("    " <> line), do: Regex.match?(~r/\A(\(|\S+:\d+: )/, line)
+  defp frame_line?(_line), do: false
+
+  defp parse_exception(line) do
+    "** " <> err_msg = String.trim_leading(line)
+
     case Regex.run(~r/\((.*?)\)\s*(.*?)\z/, err_msg) do
-      [_, type, message] ->
-        Map.put_new(res, :exception, type: type, message: message)
-
-      _ ->
-        Map.put_new(res, :exception, type: "RuntimeError", message: err_msg)
+      [_, type, message] -> [type: type, message: message]
+      _ -> [type: "RuntimeError", message: err_msg]
     end
   end
 
-  defp parse_line("(" <> _ = st_line, res) do
-    Map.put(res, :stacktrace, [st_line | Map.get(res, :stacktrace, [])])
-  end
-
-  defp parse_line(line, res) do
-    case String.split(line, ": ", parts: 2) do
-      [key, value] ->
-        key = key |> String.downcase() |> String.to_atom()
-        put_in(res, [:context, key], value)
-
-      [value] ->
-        put_in(res, [:context, :title], value)
-    end
+  defp parse_context(lines) do
+    lines
+    |> Enum.reject(&(frame_line?(&1) or String.trim(&1) == ""))
+    |> Enum.reduce(%{}, fn line, context ->
+      case line |> String.trim_leading() |> String.split(": ", parts: 2) do
+        [key, value] -> Map.put_new(context, String.downcase(key), value)
+        [title] -> Map.put_new(context, "title", title)
+      end
+    end)
   end
 end

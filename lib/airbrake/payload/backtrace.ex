@@ -18,13 +18,13 @@ defmodule Airbrake.Payload.Backtrace do
   end
 
   def from_stacktrace_entry(string) when is_binary(string) do
-    info = Regex.named_captures(~r/(?<app>\(.*?\))\s*(?<file>.*?):(?<line>\d+):\s*(?<function>.*)\z/, string)
+    info = Regex.named_captures(~r/\A(?:(?<app>\(.*?\))\s*)?(?<file>.*?):(?<line>\d+):\s*(?<function>.*)\z/, string)
 
     if info do
       %{
         file: info["file"],
         line: String.to_integer(info["line"]),
-        function: "#{info["app"]} #{info["function"]}"
+        function: format_function(info["app"], info["function"])
       }
     else
       %{
@@ -40,6 +40,9 @@ defmodule Airbrake.Payload.Backtrace do
     string = Atom.to_string(module)
     if String.starts_with?(string, "Elixir."), do: string, else: ":#{string}"
   end
+
+  defp format_function("", function), do: function
+  defp format_function(app, function), do: "#{app} #{function}"
 
   defp format_args(args) when is_integer(args) do
     "/#{args}"

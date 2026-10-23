@@ -8,6 +8,17 @@ Breaking changes:
 * `httpoison` 1.x is no longer supported. `httpoison` 2.x and 3.x are supported.
   `httpoison` 3.x uses `hackney` 4.x, which requires Erlang/OTP 26 or later.
 
+**Logger backend:** `Airbrake.LoggerBackend` builds better notices from log
+messages.
+* The backtrace is the stacktrace lines right after the `** (Type) message`
+  line. Lines without an `(app vsn)` prefix, such as
+  `lib/my_app/worker.ex:12: MyApp.Worker.run/1`, are now in the backtrace
+  instead of the context. Other stacktrace lines, such as the client's
+  stacktrace in a GenServer crash report, are no longer in the backtrace or the
+  context.
+* The backend no longer creates atoms from the text of log messages.
+* The backend no longer prints exceptions with `IO.inspect/1`.
+
 ## v3.0.0-rc.0 (2026-04-17)
 
 The v3.0.0 release makes configuration and JSON encoding much better and less

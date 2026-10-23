@@ -68,6 +68,7 @@ defmodule Airbrake.Mixfile do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.30", only: [:dev, :test]},
       {:excoveralls, "~> 0.18", only: :test},
+      {:logger_backends, "~> 1.0", only: :test},
       {:mox, "~> 1.1", only: :test},
       {:stream_data, "~> 1.2", only: [:dev, :test]}
     ]

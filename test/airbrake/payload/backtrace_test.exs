@@ -86,9 +86,23 @@ defmodule Airbrake.Payload.BacktraceTests do
       end
     end
 
+    property "formats a string entry with file and function information but no app" do
+      check all file <- string(:alphanumeric, min_length: 1),
+                line <- integer(1..1000),
+                function <- string(:alphanumeric, min_length: 1) do
+        entry = "#{file}:#{line}: #{function}"
+
+        assert Backtrace.from_stacktrace_entry(entry) == %{
+                 file: file,
+                 line: line,
+                 function: function
+               }
+      end
+    end
+
     property "format a string entry that can't be parsed" do
-      # the chance of generating a correct entry must be astronomical
-      check all entry <- string(:ascii) do
+      # without a colon, there is no "file:line:" to parse
+      check all entry <- filter(string(:ascii), &(not String.contains?(&1, ":"))) do
         assert Backtrace.from_stacktrace_entry(entry) == %{
                  file: "unknown",
                  line: 0,

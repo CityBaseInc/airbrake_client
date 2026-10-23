@@ -26,8 +26,8 @@ Breaking changes:
 
 **Logger backend:** `Airbrake.LoggerBackend` builds better notices from log
 messages.
-* The backtrace is the stacktrace lines right after the `** (Type) message`
-  line. Lines without an `(app vsn)` prefix, such as
+* The backtrace is the stacktrace lines after the exception message, even if
+  the message has more than one line. Lines without an `(app vsn)` prefix, such as
   `lib/my_app/worker.ex:12: MyApp.Worker.run/1`, are now in the backtrace
   instead of the context. Other stacktrace lines, such as the client's
   stacktrace in a GenServer crash report, are no longer in the backtrace or the

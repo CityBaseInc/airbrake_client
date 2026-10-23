@@ -52,10 +52,10 @@ defmodule Airbrake.LoggerBackend do
       backend uses the last one. If the line has no `(Type)`, the type is
       `"RuntimeError"` and the message is the rest of the line. If the
       exception message has more than one line, only its first line is the
-      error message.
+      error message, and the backend ignores the other lines.
 
-    * **Backtrace.** The indented stacktrace lines right after the
-      `** (Type) message` line are the backtrace, for example
+    * **Backtrace.** The indented stacktrace lines after the exception message
+      are the backtrace, for example
       `(my_app 0.1.0) lib/my_app/worker.ex:12: MyApp.Worker.run/1` or
       `lib/my_app/worker.ex:12: MyApp.Worker.run/1`. The backend ignores other
       stacktrace lines. For example, a GenServer crash report also has the
@@ -113,7 +113,7 @@ defmodule Airbrake.LoggerBackend do
     {:ok, state}
   end
 
-  # The exception is the last "** " line, and its backtrace is the frame lines right after it.
+  # The exception is the last "** " line, and its backtrace is the frame lines after the rest of its message.
   defp parse_error_message(msg) do
     reversed_lines = msg |> to_string() |> String.split("\n") |> Enum.reverse()
 
@@ -122,10 +122,18 @@ defmodule Airbrake.LoggerBackend do
         :error
 
       {reversed_after, [exception_line | reversed_before]} ->
-        {frames, rest} = reversed_after |> Enum.reverse() |> Enum.split_while(&frame_line?/1)
+        {frames, rest} = reversed_after |> Enum.reverse() |> split_backtrace()
         stacktrace = Enum.map(frames, &String.trim_leading/1)
         context = parse_context(Enum.reverse(reversed_before) ++ rest)
         {:ok, parse_exception(exception_line), stacktrace, context}
+    end
+  end
+
+  # Without frames, the lines after the exception are context, not the rest of its message.
+  defp split_backtrace(lines) do
+    case Enum.split_while(lines, &(not frame_line?(&1))) do
+      {_message_lines, [_ | _] = frames_and_rest} -> Enum.split_while(frames_and_rest, &frame_line?/1)
+      {_, []} -> {[], lines}
     end
   end
 

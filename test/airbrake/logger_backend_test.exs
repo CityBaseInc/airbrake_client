@@ -153,6 +153,25 @@ defmodule Airbrake.LoggerBackendTest do
       assert context["state"] == "%{a: 1}"
       refute Map.has_key?(context, "lib/caller.ex:8")
     end
+
+    test "finds the backtrace after an exception message with more than one line" do
+      # The message of a KeyError has more than one line only in Elixir 1.19+.
+      try do
+        Map.fetch!(Process.get(:airbrake_test_map, %{abc: 1}), :abd)
+      rescue
+        e in KeyError ->
+          log_error(
+            Exception.format(:error, %{e | message: "key :abd not found in:\n\n    %{abc: 1}\n"}, __STACKTRACE__)
+          )
+      end
+
+      %{"errors" => [error], "context" => context} = receive_payload()
+
+      assert error["type"] == "KeyError"
+      assert error["message"] == "key :abd not found in:"
+      assert Enum.any?(error["backtrace"], &(&1["function"] =~ "map_get"))
+      refute Map.has_key?(context, "%{abc")
+    end
   end
 
   describe "properties" do
@@ -168,6 +187,25 @@ defmodule Airbrake.LoggerBackendTest do
         %{"context" => context} = receive_payload()
         assert context[String.downcase(key)] == value
         assert_raise ArgumentError, fn -> String.to_existing_atom(String.downcase(key)) end
+      end
+    end
+
+    property "ignores the other lines of a multi-line exception message" do
+      stub(MockHTTPoison, :post, airbrake_post_mock_fun())
+
+      check all message_lines <- list_of(message_line(), min_length: 1),
+                function_names <- list_of(string(:alphanumeric, min_length: 1), min_length: 1) do
+        frames = Enum.map(function_names, &"    (my_app 0.1.0) lib/my_app.ex:12: MyApp.#{&1}/1")
+
+        log_error(Enum.join(["** (RuntimeError) boom" | message_lines] ++ frames, "\n"))
+
+        %{"errors" => [error], "context" => context} = receive_payload()
+        assert error["message"] == "boom"
+
+        assert Enum.map(error["backtrace"], & &1["function"]) ==
+                 Enum.map(function_names, &"(my_app 0.1.0) MyApp.#{&1}/1")
+
+        assert Map.keys(context) == ["environment", "hostname"]
       end
     end
 
@@ -190,6 +228,11 @@ defmodule Airbrake.LoggerBackendTest do
 
     @impl GenServer
     def handle_call(:boom, _from, _state), do: raise("boom")
+  end
+
+  # A line of an exception message after its first line, like the "    %{abc: 1}" line of a KeyError.
+  defp message_line do
+    one_of([constant(""), string(:alphanumeric, min_length: 1), map(string(:alphanumeric), &"    #{&1}")])
   end
 
   defp log_error(message) do

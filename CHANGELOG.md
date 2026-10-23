@@ -7,6 +7,22 @@ Breaking changes:
   versions that have reached end of life.
 * `httpoison` 1.x is no longer supported. `httpoison` 2.x and 3.x are supported.
   `httpoison` 3.x uses `hackney` 4.x, which requires Erlang/OTP 26 or later.
+* `use Airbrake.GenServer` is no longer supported, and it raises an error at
+  compile time. Call `Airbrake.GenServer.report_termination/2` from the
+  `terminate/2` callback of your `GenServer` instead. The notice no longer has
+  the inspected state of the `GenServer` in its context, which could include
+  secrets or personal data. Add only what you need to the context you pass to
+  `report_termination/2`.
+
+**GenServer termination:** `Airbrake.GenServer.report_termination/2` replaces
+`Airbrake.GenServer.handle_terminate/2`, which is deprecated.
+* A raised exception is now reported with its own type, message, and
+  stacktrace. Before, it was reported as a `RuntimeError` with the inspected
+  `{exception, stacktrace}` tuple as its message.
+* An Erlang error is now reported as the matching Elixir exception with its
+  stacktrace. For example, `{:badmatch, 1}` is reported as a `MatchError`
+  instead of a `RuntimeError`.
+* `Airbrake.monitor/1` also gets these fixes.
 
 **Logger backend:** `Airbrake.LoggerBackend` builds better notices from log
 messages.

@@ -163,5 +163,5 @@ See the specific modules for more details.
 * `Airbrake.Plug` to post a notice for an error in a `plug` pipeline.
 * `Airbrake.Channel` to post a notice for an error on a web channel.
 * `Airbrake.monitor/1` to post a notice for errors from a process.
-* `Airbrake.GenServer` or `Airbrake.GenServer.handle_terminate/2` to post a
-  notice when a `GenServer` terminates abnormally.
+* `Airbrake.GenServer.report_termination/2` to post a notice when a `GenServer`
+  terminates abnormally.

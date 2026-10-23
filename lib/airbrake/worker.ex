@@ -113,7 +113,7 @@ defmodule Airbrake.Worker do
   @spec handle_info(term(), State.t()) :: {:noreply, State.t()}
   def handle_info({:DOWN, ref, :process, pid, reason}, state) do
     {pname, refs} = Map.pop(state.refs, ref)
-    Airbrake.GenServer.handle_terminate(reason, %{process_name: process_name(pname, pid)})
+    Airbrake.GenServer.report_termination(reason, %{process_name: process_name(pname, pid)})
     {:noreply, Map.put(state, :refs, refs)}
   end
 

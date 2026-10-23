@@ -28,6 +28,13 @@ Breaking changes:
 **Channel errors:** An error in the `handle_info/2` callback of a channel no
 longer crashes the worker. The message is in the params as `message`.
 
+**Plug and Channel details:** `Airbrake.Plug` and `Airbrake.Channel` add their
+details to the notice from `Airbrake.LoggerBackend` for an exception with a
+message of more than one line, such as a `KeyError`. Before, the backend
+reported only the first line of the message, which did not match the
+remembered exception, and the details were lost. The docs now say that both
+modules need `Airbrake.LoggerBackend`.
+
 **GenServer termination:** `Airbrake.GenServer.report_termination/2` replaces
 `Airbrake.GenServer.handle_terminate/2`, which is deprecated.
 * `report_termination/2` takes the options of `Airbrake.report/2`, so you can

@@ -52,6 +52,30 @@ defmodule Airbrake.ChannelTest do
     end
   end
 
+  describe "with Airbrake.LoggerBackend" do
+    test "adds the details to the notice for an exception with a message of more than one line" do
+      expect(MockHTTPoison, :post, airbrake_post_mock_fun())
+
+      {exception, stacktrace} =
+        try do
+          RoomChannel.handle_in("fetch", %{}, @socket)
+        rescue
+          exception -> {exception, __STACKTRACE__}
+        end
+
+      log_message = Exception.format(:error, exception, stacktrace)
+
+      Airbrake.LoggerBackend.handle_event(
+        {:error, self(), {Logger, log_message, {{2026, 1, 1}, {0, 0, 0, 0}}, []}},
+        nil
+      )
+
+      %{"errors" => [error], "context" => context} = receive_payload()
+      assert error["type"] == "KeyError"
+      assert context["action"] == "fetch"
+    end
+  end
+
   describe "handle_info/2 and terminate/2" do
     test "remember the callback as the action" do
       stub(MockHTTPoison, :post, airbrake_post_mock_fun())
@@ -84,6 +108,7 @@ defmodule Airbrake.ChannelTest do
     use Airbrake.Channel
 
     def join(_topic, _payload, _socket), do: raise("join failed")
+    def handle_in("fetch", payload, _socket), do: Map.fetch!(payload, "missing")
     def handle_in(event, _payload, _socket), do: raise("#{event} failed")
     def handle_info(_message, _socket), do: raise("handle_info failed")
     def terminate(_reason, _socket), do: raise("terminate failed")

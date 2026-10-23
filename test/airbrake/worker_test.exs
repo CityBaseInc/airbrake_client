@@ -1,5 +1,6 @@
 defmodule Airbrake.WorkerTest do
   use ExUnit.Case, async: false
+  use ExUnitProperties
 
   import Airbrake.Test
   import Mox
@@ -96,6 +97,40 @@ defmodule Airbrake.WorkerTest do
 
       assert %State{last_exception: {last_exception, _options}} = :sys.get_state(worker_pid)
       assert last_exception == expected_state
+    end
+  end
+
+  describe "report/2 after remember/2" do
+    property "adds the remembered details when the message is the first line of the remembered message" do
+      stub(Airbrake.MockHTTPoison, :post, airbrake_post_mock_fun())
+
+      check all type <- string(:alphanumeric, min_length: 1),
+                first_line <- string(:alphanumeric, min_length: 1),
+                other_lines <- list_of(string(:alphanumeric)) do
+        message = Enum.join([first_line | other_lines], "\n")
+        Airbrake.Worker.remember([type: type, message: message], context: %{component: "Remembered"})
+
+        Airbrake.Worker.report([type: type, message: first_line], [])
+
+        assert_receive {:airbrake_report, %{payload: payload}}, 500
+        assert Poison.decode!(payload)["context"]["component"] == "Remembered"
+      end
+    end
+
+    property "does not add the remembered details for another exception" do
+      stub(Airbrake.MockHTTPoison, :post, airbrake_post_mock_fun())
+
+      check all type <- string(:alphanumeric, min_length: 1),
+                message <- string(:alphanumeric, min_length: 1),
+                other_message <- string(:alphanumeric, min_length: 1),
+                other_message != message do
+        Airbrake.Worker.remember([type: type, message: message], context: %{component: "Remembered"})
+
+        Airbrake.Worker.report([type: type, message: other_message], [])
+
+        assert_receive {:airbrake_report, %{payload: payload}}, 500
+        refute Map.has_key?(Poison.decode!(payload)["context"], "component")
+      end
     end
   end
 

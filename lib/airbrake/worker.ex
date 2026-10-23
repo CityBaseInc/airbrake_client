@@ -84,14 +84,19 @@ defmodule Airbrake.Worker do
   end
 
   @spec handle_cast(term(), State.t()) :: {:noreply, State.t()}
-  def handle_cast({:report, exception, stacktrace, options}, %{last_exception: {exception, details}} = state) do
-    enhanced_options =
-      Enum.reduce([:context, :params, :session, :env], options, fn key, enhanced_options ->
-        Keyword.put(enhanced_options, key, Map.merge(options[key] || %{}, details[key] || %{}))
-      end)
+  def handle_cast({:report, exception, stacktrace, options}, %{last_exception: {remembered, details}} = state) do
+    if same_exception?(exception, remembered) do
+      enhanced_options =
+        Enum.reduce([:context, :params, :session, :env], options, fn key, enhanced_options ->
+          Keyword.put(enhanced_options, key, Map.merge(options[key] || %{}, details[key] || %{}))
+        end)
 
-    Notice.post_notice(exception, stacktrace, enhanced_options)
-    {:noreply, Map.put(state, :last_exception, nil)}
+      Notice.post_notice(exception, stacktrace, enhanced_options)
+      {:noreply, Map.put(state, :last_exception, nil)}
+    else
+      Notice.post_notice(exception, stacktrace, options)
+      {:noreply, state}
+    end
   end
 
   def handle_cast({:report, exception, stacktrace, options}, state) do
@@ -127,6 +132,15 @@ defmodule Airbrake.Worker do
       do: Keyword.put(opts, :logger_metadata, Logger.metadata()),
       else: opts
   end
+
+  # Airbrake.LoggerBackend reports only the first line of a message with more than one line.
+  defp same_exception?(exception, exception), do: true
+
+  defp same_exception?([type: type, message: message], type: type, message: remembered_message)
+       when is_binary(remembered_message),
+       do: message == remembered_message |> String.split("\n", parts: 2) |> hd()
+
+  defp same_exception?(_exception, _remembered), do: false
 
   # So that Airbrake can group properly:
   # * A monitored name is the context.component since it remains constant.

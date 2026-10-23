@@ -5,6 +5,8 @@
 Breaking changes:
 * The minimum Elixir version is now 1.17. Elixir 1.16 only runs on Erlang/OTP
   versions that have reached end of life.
+* `httpoison` 1.x is no longer supported. `httpoison` 2.x and 3.x are supported.
+  `httpoison` 3.x uses `hackney` 4.x, which requires Erlang/OTP 26 or later.
 
 ## v3.0.0-rc.0 (2026-04-17)
 

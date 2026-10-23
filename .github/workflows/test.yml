@@ -109,6 +109,9 @@ jobs:
         include:
           - elixir: '1.20'
             otp: '29'
+          - elixir: '1.20'
+            otp: '29'
+            httpoison: '~> 2.0'
     steps:
       - uses: actions/checkout@v4
       - name: Setup elixir
@@ -117,8 +120,19 @@ jobs:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
 
+      - name: Restrict HTTPoison Version
+        if: matrix.httpoison
+        run: |
+          sed -i 's/{:httpoison, "[^"]*"}/{:httpoison, "${{matrix.httpoison}}"}/' mix.exs
+          grep -F '{:httpoison, "${{matrix.httpoison}}"}' mix.exs
+
       - name: Get Deps
         run: mix deps.get
+
+      - name: Verify HTTPoison Version
+        if: matrix.httpoison
+        run: |
+          grep -E '"httpoison": \{:hex, :httpoison, "2\.' mix.lock
 
       - name: Cache Elixir build
         uses: actions/cache@v3

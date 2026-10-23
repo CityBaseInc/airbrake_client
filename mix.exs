@@ -60,7 +60,7 @@ defmodule Airbrake.Mixfile do
 
   defp deps do
     [
-      {:httpoison, "~> 1.0 or ~> 2.0"},
+      {:httpoison, "~> 2.0 or ~> 3.0"},
       {:jason, ">= 1.0.0", optional: true},
       {:poison, ">= 2.0.0", optional: true},
       # dev and test

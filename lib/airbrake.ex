@@ -3,11 +3,8 @@ defmodule Airbrake do
   This module provides functions to report any kind of exception to
   [Airbrake](https://airbrake.io/) or [Errbit](http://errbit.com/).
 
-  `Airbrake.report/2` can be used to report directly to Airbrake.io.
-  `Airbrake.Plug` and `Airbrake.Channel` can be used to automatically report
-  errors from controllers or channels.
-
-  See [README](readme.html) for configuration and usage instructions.
+  See the [README](readme.html) for configuration and the other ways to report
+  errors.
   """
 
   use Application

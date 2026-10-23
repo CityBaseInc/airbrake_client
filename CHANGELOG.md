@@ -11,7 +11,7 @@ Breaking changes:
   compile time. Call `Airbrake.GenServer.report_termination/2` from the
   `terminate/2` callback of your `GenServer` instead. The notice no longer has
   the inspected state of the `GenServer` in its context, which could include
-  secrets or personal data. Add only what you need to the context you pass to
+  secrets or personal data. Add only what you need to the options you pass to
   `report_termination/2`.
 * `Airbrake.LoggerBackend` puts the `Key: value` lines and the title of a log
   message in the session instead of the context. Before, a line such as
@@ -20,6 +20,9 @@ Breaking changes:
 
 **GenServer termination:** `Airbrake.GenServer.report_termination/2` replaces
 `Airbrake.GenServer.handle_terminate/2`, which is deprecated.
+* `report_termination/2` takes the options of `Airbrake.report/2`, so you can
+  set the context and the session. `handle_terminate/2` still takes a context
+  map.
 * A raised exception is now reported with its own type, message, and
   stacktrace. Before, it was reported as a `RuntimeError` with the inspected
   `{exception, stacktrace}` tuple as its message.
@@ -27,6 +30,9 @@ Breaking changes:
   stacktrace. For example, `{:badmatch, 1}` is reported as a `MatchError`
   instead of a `RuntimeError`.
 * `Airbrake.monitor/1` also gets these fixes.
+* `Airbrake.monitor/1` no longer puts `process_name` in the context. If you
+  monitor a registered name, the name is the `component` of the context, which
+  Airbrake recognizes. The session has the inspected process as `process`.
 
 **Logger backend:** `Airbrake.LoggerBackend` builds better notices from log
 messages.

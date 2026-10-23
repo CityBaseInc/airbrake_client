@@ -109,6 +109,11 @@ defmodule Airbrake do
   If you don't want system-wide monitoring, but would like to monitor one specific process,
   then you could use `Airbrake.monitor/1`
 
+  When the process terminates abnormally, the notice is built like the one from
+  `Airbrake.GenServer.report_termination/2`. If you monitor a registered name,
+  the name is the `component` of the context. The session has the inspected
+  process as `process`.
+
   Examples:
 
   With a given PID:

@@ -13,7 +13,7 @@ defmodule Airbrake.GenServer do
 
     @impl GenServer
     def terminate(reason, _state) do
-      Airbrake.GenServer.report_termination(reason, %{process_name: __MODULE__})
+      Airbrake.GenServer.report_termination(reason, context: %{component: inspect(__MODULE__)})
       :ok
     end
   end
@@ -21,7 +21,8 @@ defmodule Airbrake.GenServer do
 
   `report_termination/2` reports only when `reason` indicates the process
   terminated abnormally. It does not report a normal exit (`:normal`) or a
-  shutdown (`:shutdown` or `{:shutdown, term}`).
+  shutdown (`:shutdown` or `{:shutdown, term}`). `component` is the context
+  field that Airbrake uses for the module in which the error occurred.
 
   See `c:GenServer.terminate/2` for more details about when it is called.
 
@@ -50,34 +51,39 @@ defmodule Airbrake.GenServer do
   * Any other reason is reported as a `RuntimeError` with the inspected reason
     as its message.
 
-  `context` is the context of the notice. The values in `context` are sent to
-  Airbrake without filtering, so do not put secrets or personal data in it.
+  `options` are the options of `Airbrake.report/2`. The stacktrace of a raised
+  exception replaces the `:stacktrace` option. The values in `:context` and
+  `:session` are sent to Airbrake without filtering, so do not put secrets or
+  personal data in them.
   """
   @doc since: "3.0.0"
-  @spec report_termination(term(), map()) :: nil | :ok | {:error, ArgumentError}
-  def report_termination(reason, context)
-  def report_termination(:normal, _context), do: nil
-  def report_termination(:shutdown, _context), do: nil
-  def report_termination({:shutdown, _}, _context), do: nil
+  @spec report_termination(term(), Keyword.t()) :: nil | :ok | {:error, ArgumentError}
+  def report_termination(reason, options \\ [])
+  def report_termination(:normal, _options), do: nil
+  def report_termination(:shutdown, _options), do: nil
+  def report_termination({:shutdown, _}, _options), do: nil
 
-  def report_termination({error, stacktrace} = reason, context) when is_list(stacktrace) do
+  def report_termination({exception, []}, options) when is_exception(exception),
+    do: Airbrake.report(exception, Keyword.put(options, :stacktrace, []))
+
+  def report_termination({error, stacktrace} = reason, options) when is_list(stacktrace) do
     if stacktrace?(stacktrace) do
       :error
       |> Exception.normalize(error, stacktrace)
-      |> Airbrake.report(stacktrace: stacktrace, context: context)
+      |> Airbrake.report(Keyword.put(options, :stacktrace, stacktrace))
     else
-      report_other_reason(reason, context)
+      report_other_reason(reason, options)
     end
   end
 
-  def report_termination(reason, context), do: report_other_reason(reason, context)
+  def report_termination(reason, options), do: report_other_reason(reason, options)
 
   @doc """
   Reports the termination of a process. Use `report_termination/2` instead.
   """
   @deprecated "Use Airbrake.GenServer.report_termination/2 instead."
   @spec handle_terminate(term(), map()) :: nil | :ok | {:error, ArgumentError}
-  defdelegate handle_terminate(reason, context), to: __MODULE__, as: :report_termination
+  def handle_terminate(reason, context), do: report_termination(reason, context: context)
 
   defp stacktrace?([_ | _] = stacktrace), do: Enum.all?(stacktrace, &stacktrace_entry?/1)
   defp stacktrace?(_), do: false
@@ -93,7 +99,7 @@ defmodule Airbrake.GenServer do
 
   defp stacktrace_entry?(_), do: false
 
-  defp report_other_reason(reason, context) do
-    reason |> inspect() |> RuntimeError.exception() |> Airbrake.report(context: context)
+  defp report_other_reason(reason, options) do
+    reason |> inspect() |> RuntimeError.exception() |> Airbrake.report(options)
   end
 end

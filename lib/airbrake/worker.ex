@@ -113,7 +113,7 @@ defmodule Airbrake.Worker do
   @spec handle_info(term(), State.t()) :: {:noreply, State.t()}
   def handle_info({:DOWN, ref, :process, pid, reason}, state) do
     {pname, refs} = Map.pop(state.refs, ref)
-    Airbrake.GenServer.report_termination(reason, %{process_name: process_name(pname, pid)})
+    Airbrake.GenServer.report_termination(reason, monitor_options(pname, pid))
     {:noreply, Map.put(state, :refs, refs)}
   end
 
@@ -128,8 +128,11 @@ defmodule Airbrake.Worker do
       else: opts
   end
 
-  defp process_name(pid, pid), do: "Process [#{inspect(pid)}]"
-  defp process_name(pname, pid), do: "#{inspect(pname)} [#{inspect(pid)}]"
+  # So that Airbrake can group properly:
+  # * A monitored name is the context.component since it remains constant.
+  # * The pid is different for each process, so it goes in the session.
+  defp monitor_options(pid, pid), do: [session: %{process: inspect(pid)}]
+  defp monitor_options(name, pid), do: [context: %{component: inspect(name)}, session: %{process: inspect(pid)}]
 
   @deprecated "Use Airbrake.Config.get/2 instead."
   @spec get_env(atom(), term()) :: term()

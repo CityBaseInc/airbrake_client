@@ -62,12 +62,13 @@ defmodule Airbrake.LoggerBackend do
       stacktrace of the client that called the GenServer, and the backtrace
       does not include it.
 
-    * **Context.** Each line of the form `Key: value` adds the lowercased key
-      and its value to the context. A GenServer crash report adds
+    * **Session.** Each line of the form `Key: value` adds the lowercased key
+      and its value to the session. A GenServer crash report adds
       `"last message"` and `"state"`, and a Task crash report adds
       `"function"` and `"args"`. The first line that is not `Key: value` is
-      the `"title"`. The context also has the `environment` and `hostname`,
-      as in every notice.
+      the `"title"`. The backend puts these in the session, not the context,
+      so that they do not replace the context fields that Airbrake recognizes,
+      such as `environment` and `hostname`.
 
   The backend does not send the `Logger` metadata of the event. Logger can
   truncate a long message before the backend gets it (see the `:truncate`
@@ -75,7 +76,7 @@ defmodule Airbrake.LoggerBackend do
 
   > #### Sensitive data {: .warning}
   >
-  > The backend sends the exception message and the context values as they
+  > The backend sends the exception message and the session values as they
   > appear in the log message. The `:filter_parameters` and `:filter_headers`
   > options do not apply to them. A GenServer crash report includes the last
   > message and the full state of the GenServer, which can include secrets or
@@ -102,7 +103,7 @@ defmodule Airbrake.LoggerBackend do
 
   def handle_event({:error, _, {Logger, msg, _ts, _metadata}}, state) do
     case parse_error_message(msg) do
-      {:ok, exception, stacktrace, context} -> Airbrake.report(exception, stacktrace: stacktrace, context: context)
+      {:ok, exception, stacktrace, session} -> Airbrake.report(exception, stacktrace: stacktrace, session: session)
       :error -> :ok
     end
 
@@ -124,12 +125,12 @@ defmodule Airbrake.LoggerBackend do
       {reversed_after, [exception_line | reversed_before]} ->
         {frames, rest} = reversed_after |> Enum.reverse() |> split_backtrace()
         stacktrace = Enum.map(frames, &String.trim_leading/1)
-        context = parse_context(Enum.reverse(reversed_before) ++ rest)
-        {:ok, parse_exception(exception_line), stacktrace, context}
+        session = parse_session(Enum.reverse(reversed_before) ++ rest)
+        {:ok, parse_exception(exception_line), stacktrace, session}
     end
   end
 
-  # Without frames, the lines after the exception are context, not the rest of its message.
+  # Without frames, the lines after the exception are session data, not the rest of its message.
   defp split_backtrace(lines) do
     case Enum.split_while(lines, &(not frame_line?(&1))) do
       {_message_lines, [_ | _] = frames_and_rest} -> Enum.split_while(frames_and_rest, &frame_line?/1)
@@ -152,13 +153,13 @@ defmodule Airbrake.LoggerBackend do
     end
   end
 
-  defp parse_context(lines) do
+  defp parse_session(lines) do
     lines
     |> Enum.reject(&(frame_line?(&1) or String.trim(&1) == ""))
-    |> Enum.reduce(%{}, fn line, context ->
+    |> Enum.reduce(%{}, fn line, session ->
       case line |> String.trim_leading() |> String.split(": ", parts: 2) do
-        [key, value] -> Map.put_new(context, String.downcase(key), value)
-        [title] -> Map.put_new(context, "title", title)
+        [key, value] -> Map.put_new(session, String.downcase(key), value)
+        [title] -> Map.put_new(session, "title", title)
       end
     end)
   end

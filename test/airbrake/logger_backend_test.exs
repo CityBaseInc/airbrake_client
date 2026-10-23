@@ -92,15 +92,15 @@ defmodule Airbrake.LoggerBackendTest do
         catch_exit(GenServer.call(pid, :boom))
       end)
 
-      %{"errors" => [error], "context" => context} = receive_payload()
+      %{"errors" => [error], "session" => session} = receive_payload()
       functions = Enum.map(error["backtrace"], & &1["function"])
 
       assert error["type"] == "RuntimeError"
       assert error["message"] == "boom"
       assert Enum.any?(functions, &(&1 =~ "Crashy.handle_call/3"))
       refute Enum.any?(functions, &(&1 =~ "GenServer.call/3"))
-      assert context["state"] == "%{}"
-      assert context["title"] =~ ~r/\AGenServer #PID<.*> terminating\z/
+      assert session["state"] == "%{}"
+      assert session["title"] =~ ~r/\AGenServer #PID<.*> terminating\z/
     end
   end
 
@@ -117,14 +117,14 @@ defmodule Airbrake.LoggerBackendTest do
           (elixir 1.20.4) lib/gen_server.ex:1180: GenServer.call/3
       """)
 
-      %{"errors" => [error], "context" => context} = receive_payload()
+      %{"errors" => [error], "session" => session} = receive_payload()
 
       assert error["backtrace"] == [
                %{"file" => "lib/my_app/foo.ex", "line" => 13, "function" => "MyApp.Foo.bar/1"},
                %{"file" => "lib/gen_server.ex", "line" => 1180, "function" => "(elixir 1.20.4) GenServer.call/3"}
              ]
 
-      refute Map.has_key?(context, "lib/my_app/foo.ex:13")
+      assert session == nil
     end
 
     test "uses only the frames right after the exception for the backtrace" do
@@ -141,17 +141,18 @@ defmodule Airbrake.LoggerBackendTest do
           lib/caller.ex:8: Caller.go/2
       """)
 
-      %{"errors" => [error], "context" => context} = receive_payload()
+      %{"errors" => [error], "session" => session} = receive_payload()
 
       assert Enum.map(error["backtrace"], & &1["function"]) == [
                "Crashy.handle_call/3",
                "(stdlib 6.2.1) :gen_server.try_handle_call/4"
              ]
 
-      assert context["title"] == "GenServer #PID<0.104.0> terminating"
-      assert context["last message (from #pid<0.94.0>)"] == ":boom"
-      assert context["state"] == "%{a: 1}"
-      refute Map.has_key?(context, "lib/caller.ex:8")
+      assert session == %{
+               "title" => "GenServer #PID<0.104.0> terminating",
+               "last message (from #pid<0.94.0>)" => ":boom",
+               "state" => "%{a: 1}"
+             }
     end
 
     test "finds the backtrace after an exception message with more than one line" do
@@ -165,17 +166,17 @@ defmodule Airbrake.LoggerBackendTest do
           )
       end
 
-      %{"errors" => [error], "context" => context} = receive_payload()
+      %{"errors" => [error], "session" => session} = receive_payload()
 
       assert error["type"] == "KeyError"
       assert error["message"] == "key :abd not found in:"
       assert Enum.any?(error["backtrace"], &(&1["function"] =~ "map_get"))
-      refute Map.has_key?(context, "%{abc")
+      assert session == nil
     end
   end
 
   describe "properties" do
-    property "puts each Key: value line in the context without making an atom" do
+    property "puts each Key: value line in the session without making an atom" do
       stub(MockHTTPoison, :post, airbrake_post_mock_fun())
 
       check all suffix <- string(:alphanumeric, min_length: 1),
@@ -184,9 +185,23 @@ defmodule Airbrake.LoggerBackendTest do
 
         log_error("** (RuntimeError) boom\n#{key}: #{value}")
 
-        %{"context" => context} = receive_payload()
-        assert context[String.downcase(key)] == value
+        %{"session" => session} = receive_payload()
+        assert session[String.downcase(key)] == value
         assert_raise ArgumentError, fn -> String.to_existing_atom(String.downcase(key)) end
+      end
+    end
+
+    property "never sets a context field from the log message" do
+      stub(MockHTTPoison, :post, airbrake_post_mock_fun())
+
+      check all key <- member_of(~w(Environment Hostname Severity Component Action Url User Version Route)),
+                value <- string(:alphanumeric, min_length: 1) do
+        log_error("** (RuntimeError) boom\n#{key}: #{value}")
+
+        %{"context" => context, "session" => session} = receive_payload()
+        assert Map.keys(context) == ["environment", "hostname"]
+        refute context["environment"] == value
+        assert session[String.downcase(key)] == value
       end
     end
 
@@ -199,13 +214,13 @@ defmodule Airbrake.LoggerBackendTest do
 
         log_error(Enum.join(["** (RuntimeError) boom" | message_lines] ++ frames, "\n"))
 
-        %{"errors" => [error], "context" => context} = receive_payload()
+        %{"errors" => [error], "session" => session} = receive_payload()
         assert error["message"] == "boom"
 
         assert Enum.map(error["backtrace"], & &1["function"]) ==
                  Enum.map(function_names, &"(my_app 0.1.0) MyApp.#{&1}/1")
 
-        assert Map.keys(context) == ["environment", "hostname"]
+        assert session == nil
       end
     end
 

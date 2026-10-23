@@ -13,6 +13,10 @@ Breaking changes:
   the inspected state of the `GenServer` in its context, which could include
   secrets or personal data. Add only what you need to the context you pass to
   `report_termination/2`.
+* `Airbrake.LoggerBackend` puts the `Key: value` lines and the title of a log
+  message in the session instead of the context. Before, a line such as
+  `Environment: staging` could replace a context field that Airbrake
+  recognizes.
 
 **GenServer termination:** `Airbrake.GenServer.report_termination/2` replaces
 `Airbrake.GenServer.handle_terminate/2`, which is deprecated.

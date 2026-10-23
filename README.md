@@ -88,8 +88,10 @@ See the specific modules for more details.
 
 * `Airbrake.report/1` to post a notice to Airbrake.
 * `Airbrake.LoggerBackend` to post `Logger` error messages as notices to Airbrake.
-* `Airbrake.Plug` to post a notice for an error in a `plug` pipeline.
-* `Airbrake.Channel` to post a notice for an error on a web channel.
+* `Airbrake.Plug` to add the details of the request to the notice for an error
+  in a `plug` pipeline. It needs `Airbrake.LoggerBackend`.
+* `Airbrake.Channel` to add the details of the channel to the notice for an
+  error on a web channel. It needs `Airbrake.LoggerBackend`.
 * `Airbrake.monitor/1` to post a notice for errors from a process.
 * `Airbrake.GenServer.report_termination/2` to post a notice when a `GenServer`
   terminates abnormally.

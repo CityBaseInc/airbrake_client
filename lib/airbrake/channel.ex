@@ -1,9 +1,16 @@
 defmodule Airbrake.Channel do
   @moduledoc """
-  Reports errors encountered on a channel.
+  Adds the details of the channel to the notice for an error in a channel.
+
+  `Airbrake.Channel` does not post a notice itself. It remembers the details of
+  the channel, and `Airbrake.LoggerBackend` adds them to the notice when it
+  reports the same error from the log. Set up `Airbrake.LoggerBackend` too, or
+  the details are never sent. Only the details of the latest error are
+  remembered, so if another error happens before the backend reports the
+  first one, the notice for the first one does not have its details.
 
   ```elixir
-  def YourApp.Web do
+  defmodule YourApp.Web do
     # ...
     def channel do
       quote do

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+Breaking changes:
+* The minimum Elixir version is now 1.17. Elixir 1.16 only runs on Erlang/OTP
+  versions that have reached end of life.
+
 ## v3.0.0-rc.0 (2026-04-17)
 
 The v3.0.0 release makes configuration and JSON encoding much better and less

@@ -18,6 +18,8 @@ messages.
   context.
 * The backend no longer creates atoms from the text of log messages.
 * The backend no longer prints exceptions with `IO.inspect/1`.
+* The docs explain how to set up the backend with `logger_backends` and describe
+  what the backend reports, with a warning about sensitive data.
 
 ## v3.0.0-rc.0 (2026-04-17)
 

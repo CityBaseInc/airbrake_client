@@ -1,23 +1,85 @@
 defmodule Airbrake.LoggerBackend do
   @moduledoc """
-  A `Logger` backend to post an Airbrake notice when the logger gets an error
-  message.
+  A `Logger` backend that posts an Airbrake notice when an error log message
+  contains a formatted exception.
 
-  If you are using [`logger_backends`](https://hex.pm/packages/logger_backends),
-  you can add `Airbrake.LoggerBackend` as a logger backend. Put this in the
-  `start/2` function of a module that implements the `Application` behaviour:
+  ## Setup
+
+  The `Logger` backends API is in the
+  [`logger_backends`](https://hex.pm/packages/logger_backends) package. Add it
+  to your dependencies:
+
+  ```elixir
+  {:logger_backends, "~> 1.0"}
+  ```
+
+  Then add the backend in the `start/2` callback of your application:
 
   ```elixir
   LoggerBackends.add({Airbrake.LoggerBackend, :error})
   ```
 
-  For older versions of Elixir (before 1.15), you can configure it in a
-  `config/*.exs` file:
+  You must add the backend as a `{module, id}` tuple. The id (`:error` here)
+  only names the backend. It does not set a log level.
+
+  For backwards compatibility, Elixir also lets you add the backend in a
+  `config/*.exs` file without `logger_backends`:
 
   ```elixir
   config :logger,
     backends: [{Airbrake.LoggerBackend, :error}, :console]
   ```
+
+  Keep `:console` in the list. If `:backends` does not include `:console`,
+  Elixir turns off its default console logging.
+
+  ## What the backend reports
+
+  The backend handles only `:error` events from the local node. Logger backends
+  receive `:critical`, `:alert`, and `:emergency` events as `:error` events, so
+  the backend handles those too.
+
+  The backend reports an event only if a line of its message starts with `** `.
+  Elixir uses this format for exceptions, for example in `Exception.format/3`
+  and in the crash reports for GenServers and Tasks. The backend does not report
+  other error messages, such as `Logger.error("payment failed")`.
+
+  The backend builds the notice from the text of the message, not from the
+  original exception:
+
+    * **Error type and message.** The backend gets these from the
+      `** (Type) message` line. If there is more than one such line, the
+      backend uses the last one. If the line has no `(Type)`, the type is
+      `"RuntimeError"` and the message is the rest of the line. If the
+      exception message has more than one line, only its first line is the
+      error message.
+
+    * **Backtrace.** The indented stacktrace lines right after the
+      `** (Type) message` line are the backtrace, for example
+      `(my_app 0.1.0) lib/my_app/worker.ex:12: MyApp.Worker.run/1` or
+      `lib/my_app/worker.ex:12: MyApp.Worker.run/1`. The backend ignores other
+      stacktrace lines. For example, a GenServer crash report also has the
+      stacktrace of the client that called the GenServer, and the backtrace
+      does not include it.
+
+    * **Context.** Each line of the form `Key: value` adds the lowercased key
+      and its value to the context. A GenServer crash report adds
+      `"last message"` and `"state"`, and a Task crash report adds
+      `"function"` and `"args"`. The first line that is not `Key: value` is
+      the `"title"`. The context also has the `environment` and `hostname`,
+      as in every notice.
+
+  The backend does not send the `Logger` metadata of the event. Logger can
+  truncate a long message before the backend gets it (see the `:truncate`
+  option of `Logger`), and then the end of the backtrace is lost.
+
+  > #### Sensitive data {: .warning}
+  >
+  > The backend sends the exception message and the context values as they
+  > appear in the log message. The `:filter_parameters` and `:filter_headers`
+  > options do not apply to them. A GenServer crash report includes the last
+  > message and the full state of the GenServer, which can include secrets or
+  > personal data.
   """
 
   @behaviour :gen_event

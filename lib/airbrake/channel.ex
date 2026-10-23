@@ -15,6 +15,11 @@ defmodule Airbrake.Channel do
     # ...
   end
   ```
+
+  The context of the notice has the channel module as its `component`, the
+  event (or `"join"`, `"handle_info"`, or `"terminate"`) as its `action`, and
+  the topic as its `route`. The params are the payload of the message, and the
+  session is the assigns of the socket.
   """
 
   defmacro __using__(_env) do
@@ -32,36 +37,37 @@ defmodule Airbrake.Channel do
         super(channel_name, msg, socket)
       rescue
         exception ->
-          send_to_airbrake(exception, __STACKTRACE__, socket.assigns, msg, %{channel: channel_name})
+          send_to_airbrake(exception, __STACKTRACE__, socket, msg, "join", channel_name)
       end
 
       def handle_in(msg_type, msg, socket) do
         super(msg_type, msg, socket)
       rescue
         exception ->
-          send_to_airbrake(exception, __STACKTRACE__, socket.assigns, msg, %{msg_type: msg_type})
+          send_to_airbrake(exception, __STACKTRACE__, socket, msg, msg_type, socket.topic)
       end
 
       def handle_info(msg, socket) do
         super(msg, socket)
       rescue
         exception ->
-          send_to_airbrake(exception, __STACKTRACE__, socket.assigns, msg)
+          send_to_airbrake(exception, __STACKTRACE__, socket, %{message: msg}, "handle_info", socket.topic)
       end
 
       def terminate(reason, socket) do
         super(reason, socket)
       rescue
         exception ->
-          send_to_airbrake(exception, __STACKTRACE__, socket.assigns, %{reason: reason})
+          send_to_airbrake(exception, __STACKTRACE__, socket, %{reason: reason}, "terminate", socket.topic)
       end
 
-      defp send_to_airbrake(exception, stacktrace, session, params, context \\ nil) do
+      # component, action, and route are context fields that Airbrake recognizes.
+      defp send_to_airbrake(exception, stacktrace, socket, params, action, topic) do
         Airbrake.Worker.remember(exception,
           params: params,
-          session: session,
+          session: socket.assigns,
           stacktrace: stacktrace,
-          context: context
+          context: %{component: inspect(__MODULE__), action: action, route: topic}
         )
 
         reraise exception, stacktrace

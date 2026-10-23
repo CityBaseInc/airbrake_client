@@ -17,6 +17,16 @@ Breaking changes:
   message in the session instead of the context. Before, a line such as
   `Environment: staging` could replace a context field that Airbrake
   recognizes.
+* `Airbrake.Channel` puts the channel module, the event, and the topic in the
+  `component`, `action`, and `route` fields of the context instead of
+  `channel` and `msg_type`.
+* `Airbrake.Plug` sends the client address as `userAddr` instead of `userIP`,
+  which Airbrake did not recognize. It no longer sends `cookies` in the
+  context. The cookies are still in the `"cookie"` request header, where
+  `:filter_headers` can filter them.
+
+**Channel errors:** An error in the `handle_info/2` callback of a channel no
+longer crashes the worker. The message is in the params as `message`.
 
 **GenServer termination:** `Airbrake.GenServer.report_termination/2` replaces
 `Airbrake.GenServer.handle_terminate/2`, which is deprecated.

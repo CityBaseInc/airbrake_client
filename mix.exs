@@ -70,6 +70,7 @@ defmodule Airbrake.Mixfile do
       {:excoveralls, "~> 0.18", only: :test},
       {:logger_backends, "~> 1.0", only: :test},
       {:mox, "~> 1.1", only: :test},
+      {:plug, "~> 1.0", only: :test},
       {:stream_data, "~> 1.2", only: [:dev, :test]}
     ]
   end

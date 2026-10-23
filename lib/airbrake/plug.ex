@@ -12,6 +12,11 @@ defmodule Airbrake.Plug do
     # ...
   end
   ```
+
+  The notice has the URL, the client address, and the user agent in its
+  context, the request headers in its environment, the params, and the `Plug`
+  session. Cookies are in the `"cookie"` header, so add `"cookie"` to
+  `:filter_headers` to filter them.
   """
 
   defmacro __using__(_env) do
@@ -19,14 +24,15 @@ defmodule Airbrake.Plug do
       use Plug.ErrorHandler
 
       def handle_errors(conn, %{kind: :error, reason: exception, stack: stacktrace}) do
-        conn = conn |> Plug.Conn.fetch_cookies() |> Plug.Conn.fetch_query_params()
+        conn = Plug.Conn.fetch_query_params(conn)
         headers = Enum.into(conn.req_headers, %{})
 
+        # url, userAddr, and userAgent are context fields that Airbrake recognizes. Cookies are in the
+        # "cookie" header, where :filter_headers can filter them.
         conn_data = %{
           url: "#{conn.scheme}://#{conn.host}:#{conn.port}#{conn.request_path}",
-          userIP: conn.remote_ip |> :inet.ntoa() |> to_string(),
-          userAgent: headers["user-agent"],
-          cookies: conn.req_cookies
+          userAddr: conn.remote_ip |> :inet.ntoa() |> to_string(),
+          userAgent: headers["user-agent"]
         }
 
         environment = %{

@@ -4,7 +4,8 @@
 
 Breaking changes:
 * The minimum Elixir version is now 1.17. Elixir 1.16 only runs on Erlang/OTP
-  versions that have reached end of life.
+  versions that have reached end of life. CI tests Elixir 1.17 through 1.20 on
+  Erlang/OTP 27 through 29.
 * `httpoison` 1.x is no longer supported. `httpoison` 2.x and 3.x are supported.
   `httpoison` 3.x uses `hackney` 4.x, which requires Erlang/OTP 26 or later.
 * `use Airbrake.GenServer` is no longer supported, and it raises an error at

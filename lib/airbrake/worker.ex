@@ -131,6 +131,16 @@ defmodule Airbrake.Worker do
     {:noreply, state}
   end
 
+  # Crash reports and :sys.get_status/1 show the state, the last message, and the events logged after :sys.log/2,
+  # which have unfiltered params, headers, and exception messages.
+  @spec format_status(map()) :: map()
+  def format_status(status) do
+    status
+    |> Map.replace_lazy(:state, &redact_state/1)
+    |> Map.replace_lazy(:message, &redact_message/1)
+    |> Map.replace(:log, [])
+  end
+
   defp get_stacktrace do
     {:current_stacktrace, stacktrace} = Process.info(self(), :current_stacktrace)
     stacktrace
@@ -162,6 +172,23 @@ defmodule Airbrake.Worker do
 
   defp as_map(value) when is_list(value), do: if(Keyword.keyword?(value), do: Map.new(value), else: value)
   defp as_map(value), do: value
+
+  defp redact_state(%State{last_exception: {exception, _details}} = state),
+    do: %{state | last_exception: {redact_exception(exception), [redacted: true]}}
+
+  defp redact_state(state), do: state
+
+  defp redact_message({:"$gen_cast", {:report, exception, _stacktrace, _options}}),
+    do: {:"$gen_cast", {:report, redact_exception(exception), :redacted}}
+
+  defp redact_message({:"$gen_cast", {:remember, exception, _options}}),
+    do: {:"$gen_cast", {:remember, redact_exception(exception), :redacted}}
+
+  defp redact_message({:DOWN, ref, :process, object, _reason}), do: {:DOWN, ref, :process, object, :redacted}
+  defp redact_message(_message), do: :redacted
+
+  defp redact_exception(type: type, message: _message), do: [type: type]
+  defp redact_exception(_exception), do: [type: :redacted]
 
   # So that Airbrake can group properly:
   # * A monitored name is the context.component since it remains constant.

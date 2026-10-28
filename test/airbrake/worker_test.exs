@@ -186,6 +186,49 @@ defmodule Airbrake.WorkerTest do
     end
   end
 
+  describe "format_status/1" do
+    property "redacts the remembered exception from the state", %{worker_pid: worker_pid} do
+      check all secret <- map(string(:alphanumeric, min_length: 1), &"secret-#{&1}") do
+        Airbrake.Worker.remember([type: "RuntimeError", message: secret], params: %{"password" => secret})
+
+        status = inspect(:sys.get_status(worker_pid), limit: :infinity)
+
+        assert status =~ "RuntimeError"
+        refute status =~ secret
+      end
+    end
+
+    property "redacts the last message" do
+      check all secret <- map(string(:alphanumeric, min_length: 1), &"secret-#{&1}"),
+                message <-
+                  member_of([
+                    {:"$gen_cast", {:report, [type: "RuntimeError", message: secret], [], params: secret}},
+                    {:"$gen_cast", {:remember, [type: "RuntimeError", message: secret], params: secret}},
+                    {:"$gen_cast", {:monitor, secret}},
+                    {:DOWN, make_ref(), :process, self(), {RuntimeError.exception(secret), []}},
+                    {:unexpected, secret}
+                  ]) do
+        status = Airbrake.Worker.format_status(%{state: %State{}, message: message})
+
+        refute inspect(status, limit: :infinity) =~ secret
+      end
+    end
+
+    property "redacts the messages and states in the sys log", %{worker_pid: worker_pid} do
+      :ok = :sys.log(worker_pid, true)
+
+      check all secret <- map(string(:alphanumeric, min_length: 1), &"secret-#{&1}") do
+        Airbrake.Worker.remember([type: "RuntimeError", message: secret], params: %{"password" => secret})
+
+        # The raw debug options come from :sys, not from format_status/1.
+        {:status, _pid, _module, [_pdict, _sys_state, _parent, _debug, status]} = :sys.get_status(worker_pid)
+
+        assert inspect(status, limit: :infinity) =~ "Logged events"
+        refute inspect(status, limit: :infinity) =~ secret
+      end
+    end
+  end
+
   describe "an unexpected message" do
     property "does not crash the worker", %{worker_pid: worker_pid} do
       check all message <- term(),

@@ -59,6 +59,11 @@ params and headers. These no longer crash the worker:
   a map, when the worker adds the details from `Airbrake.Plug` or
   `Airbrake.Channel`. A keyword list is now merged like a map.
 
+Crash reports and `:sys.get_status/1` for the worker no longer show the
+remembered details, the options of a notice, or exception messages. This
+includes the events logged after `:sys.log/2`, except in the raw debug options
+that `:sys.get_status/1` returns.
+
 **Plug and Channel details:** `Airbrake.Plug` and `Airbrake.Channel` add their
 details to the notice from `Airbrake.LoggerBackend` for an exception with a
 message of more than one line, such as a `KeyError`. Before, the backend

@@ -155,6 +155,88 @@ defmodule Airbrake.LoggerBackendTest do
              }
     end
 
+    test "does not use the frames of the client for a GenServer that stops without an exception" do
+      log_error("""
+      GenServer #PID<0.219.0> terminating
+      ** (stop) :bad_thing
+      Last message (from #PID<0.220.0>): :stop
+      State: %{a: 1}
+      Client #PID<0.220.0> is alive
+
+          (stdlib 8.1.1) gen.erl:262: :gen.do_call/4
+          (elixir 1.20.4) lib/gen_server.ex:1180: GenServer.call/3
+      """)
+
+      %{"errors" => [error], "session" => session} = receive_payload()
+
+      assert error["type"] == "stop"
+      assert error["message"] == ":bad_thing"
+      assert error["backtrace"] == []
+
+      assert session == %{
+               "title" => "GenServer #PID<0.219.0> terminating",
+               "last message (from #pid<0.220.0>)" => ":stop",
+               "state" => "%{a: 1}"
+             }
+    end
+
+    test "uses the frames of a nested exception for the backtrace" do
+      log_error("""
+      Task #PID<0.215.0> started from #PID<0.94.0> terminating
+      ** (stop) exited in: GenServer.call(#PID<0.214.0>, :boom, 5000)
+          ** (EXIT) an exception was raised:
+              ** (RuntimeError) boom
+                  lib/callee.ex:4: Callee.handle_call/3
+                  (stdlib 8.1.1) gen_server.erl:2470: :gen_server.try_handle_call/4
+          (elixir 1.20.4) lib/gen_server.ex:1183: GenServer.call/3
+          (elixir 1.20.4) lib/task/supervised.ex:105: Task.Supervised.invoke_mfa/2
+      Function: #Function<0.81797565 in Caller.go/0>
+          Args: []
+      """)
+
+      %{"errors" => [error], "session" => session} = receive_payload()
+
+      assert error["type"] == "RuntimeError"
+      assert error["message"] == "boom"
+
+      assert Enum.map(error["backtrace"], & &1["function"]) == [
+               "Callee.handle_call/3",
+               "(stdlib 8.1.1) :gen_server.try_handle_call/4"
+             ]
+
+      assert session == %{
+               "title" => "Task #PID<0.215.0> started from #PID<0.94.0> terminating",
+               "reason" =>
+                 "** (stop) exited in: GenServer.call(#PID<0.214.0>, :boom, 5000)\n** (EXIT) an exception was raised:",
+               "function" => "#Function<0.81797565 in Caller.go/0>",
+               "args" => "[]"
+             }
+    end
+
+    test "uses the frames of the caller for a nested exit without its own frames" do
+      log_error("""
+      Task #PID<0.220.0> started from #PID<0.94.0> terminating
+      ** (stop) exited in: GenServer.call(#PID<0.219.0>, :slow, 50)
+          ** (EXIT) time out
+          (elixir 1.20.4) lib/gen_server.ex:1183: GenServer.call/3
+          (elixir 1.20.4) lib/task/supervised.ex:105: Task.Supervised.invoke_mfa/2
+      Function: #Function<2.81797565 in Caller.go/0>
+          Args: []
+      """)
+
+      %{"errors" => [error], "session" => session} = receive_payload()
+
+      assert error["type"] == "EXIT"
+      assert error["message"] == "time out"
+
+      assert Enum.map(error["backtrace"], & &1["function"]) == [
+               "(elixir 1.20.4) GenServer.call/3",
+               "(elixir 1.20.4) Task.Supervised.invoke_mfa/2"
+             ]
+
+      assert session["reason"] == "** (stop) exited in: GenServer.call(#PID<0.219.0>, :slow, 50)"
+    end
+
     test "finds the backtrace after an exception message with more than one line" do
       # The message of a KeyError has more than one line only in Elixir 1.19+.
       try do
@@ -224,6 +306,32 @@ defmodule Airbrake.LoggerBackendTest do
       end
     end
 
+    property "uses only the frames of the innermost exception for the backtrace" do
+      stub(MockHTTPoison, :post, airbrake_post_mock_fun())
+
+      check all depth <- integer(0..4),
+                inner_names <- list_of(string(:alphanumeric, min_length: 1), min_length: 1),
+                outer_names <- list_of(string(:alphanumeric, min_length: 1)) do
+        outer_lines =
+          for level <- 0..(depth - 1)//1, do: indent(level) <> "** (EXIT) exited in: GenServer.call(:a, :b, 5000)"
+
+        inner_frames = Enum.map(inner_names, &(indent(depth + 1) <> "lib/inner.ex:4: Inner.#{&1}/1"))
+        outer_frames = Enum.map(outer_names, &(indent(1) <> "lib/outer.ex:8: Outer.#{&1}/2"))
+        exception_line = indent(depth) <> "** (RuntimeError) boom"
+
+        log_error(Enum.join(outer_lines ++ [exception_line | inner_frames] ++ outer_frames, "\n"))
+
+        %{"errors" => [error]} = receive_payload()
+
+        expected_functions =
+          if depth == 0,
+            do: Enum.map(inner_names, &"Inner.#{&1}/1") ++ Enum.map(outer_names, &"Outer.#{&1}/2"),
+            else: Enum.map(inner_names, &"Inner.#{&1}/1")
+
+        assert Enum.map(error["backtrace"], & &1["function"]) == expected_functions
+      end
+    end
+
     property "never raises, whatever the message" do
       stub(MockHTTPoison, :post, fn _url, _payload, _headers -> {:ok, %HTTPoison.Response{status_code: 201}} end)
 
@@ -249,6 +357,8 @@ defmodule Airbrake.LoggerBackendTest do
   defp message_line do
     one_of([constant(""), string(:alphanumeric, min_length: 1), map(string(:alphanumeric), &"    #{&1}")])
   end
+
+  defp indent(level), do: String.duplicate("    ", level)
 
   defp log_error(message) do
     LoggerBackend.handle_event({:error, self(), {Logger, message, {{2026, 1, 1}, {0, 0, 0, 0}}, []}}, nil)

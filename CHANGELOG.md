@@ -63,6 +63,11 @@ messages.
   instead of the context. Other stacktrace lines, such as the client's
   stacktrace in a GenServer crash report, are no longer in the backtrace or the
   context.
+* For a nested exception, such as an exception raised in a `GenServer` during
+  a `GenServer.call/3`, the backtrace is the stacktrace of the nested
+  exception instead of the stacktrace of the caller. The `** ` lines around
+  it, such as `** (stop) exited in: GenServer.call(...)`, are in the session
+  as `reason`.
 * The backend no longer creates atoms from the text of log messages.
 * The backend no longer prints exceptions with `IO.inspect/1`.
 * The docs explain how to set up the backend with `logger_backends` and describe

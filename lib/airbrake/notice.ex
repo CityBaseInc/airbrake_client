@@ -16,19 +16,30 @@ defmodule Airbrake.Notice do
       http_adapter().post(notify_url(), json_payload, @request_headers)
     end
   rescue
-    e ->
-      IO.warn("airbrake_client failed to process an error notice, sending fallback")
-      IO.warn("original error: #{string_or_inspect(exception)}", stacktrace)
-      IO.warn("post notice error: #{string_or_inspect(e)}")
-      post_fallback_notice()
-      {:error, :initial_post_failed}
+    e -> post_fallback_notice(exception, inspect(e.__struct__), __STACKTRACE__)
   catch
-    kind, value ->
-      IO.warn("airbrake_client failed to process an error notice, sending fallback")
-      IO.warn("original error: #{string_or_inspect(exception)}", stacktrace)
-      IO.warn("post notice error: #{string_or_inspect(kind)}: #{string_or_inspect(value)}")
-      post_fallback_notice()
-      {:error, :initial_post_failed}
+    kind, _value -> post_fallback_notice(exception, Atom.to_string(kind), __STACKTRACE__)
+  end
+
+  # The messages, the thrown values, and the args in the frames might have sensitive data, so the warning has only
+  # types and arities.
+  defp post_fallback_notice(exception, error, stacktrace) do
+    IO.warn(
+      "airbrake_client failed to post a notice for #{string_or_inspect(exception[:type])}, " <>
+        "sending a fallback notice: #{error}\n" <> Exception.format_stacktrace(without_args(stacktrace)),
+      []
+    )
+
+    post_fallback_notice()
+    {:error, :initial_post_failed}
+  end
+
+  defp without_args(stacktrace) do
+    Enum.map(stacktrace, fn
+      {module, function, args, location} when is_list(args) -> {module, function, length(args), location}
+      {fun, args, location} when is_list(args) -> {fun, length(args), location}
+      entry -> entry
+    end)
   end
 
   defp post_fallback_notice do

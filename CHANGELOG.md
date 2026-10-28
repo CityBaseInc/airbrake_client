@@ -44,6 +44,15 @@ environment. `:json` encoded a struct as a map with a `__struct__` key.
 (`{fun, arity, location}`) is now reported. Before, the notice failed, and
 the worker crashed.
 
+**Worker crashes:** The worker posts every notice, and a crash lost the
+processes from `Airbrake.monitor/1` and logged its state with unfiltered
+params and headers. These no longer crash the worker:
+* A notice that fails to process, such as a notice from `Airbrake.LoggerBackend`
+  with an exception message that is not valid UTF-8. The warning on stderr now
+  has only the type of the original exception, the type of the error, and the
+  stacktrace of the error with arities instead of args. Before, it had their
+  messages, which can have sensitive data.
+
 **Plug and Channel details:** `Airbrake.Plug` and `Airbrake.Channel` add their
 details to the notice from `Airbrake.LoggerBackend` for an exception with a
 message of more than one line, such as a `KeyError`. Before, the backend

@@ -28,6 +28,10 @@ Breaking changes:
 **Channel errors:** An error in the `handle_info/2` callback of a channel no
 longer crashes the worker. The message is in the params as `message`.
 
+**Anonymous function frames:** A stacktrace with an anonymous function frame
+(`{fun, arity, location}`) is now reported. Before, the notice failed, and
+the worker crashed.
+
 **Plug and Channel details:** `Airbrake.Plug` and `Airbrake.Channel` add their
 details to the notice from `Airbrake.LoggerBackend` for an exception with a
 message of more than one line, such as a `KeyError`. Before, the backend

@@ -7,14 +7,11 @@ defmodule Airbrake.Payload.Backtrace do
 
   @spec from_stacktrace_entry(tuple() | String.t()) :: map()
   def from_stacktrace_entry({module, function, args, opts}) do
-    file = Keyword.get(opts, :file, ~c"unknown")
-    line = Keyword.get(opts, :line, 0)
+    from_location("#{format_module(module)}.#{function}#{format_args(args)}", opts)
+  end
 
-    %{
-      file: file |> List.to_string(),
-      line: line,
-      function: "#{format_module(module)}.#{function}#{format_args(args)}"
-    }
+  def from_stacktrace_entry({fun, args, opts}) when is_function(fun) do
+    from_location("#{inspect(fun)}#{format_args(args)}", opts)
   end
 
   def from_stacktrace_entry(string) when is_binary(string) do
@@ -39,6 +36,14 @@ defmodule Airbrake.Payload.Backtrace do
   def format_module(module) do
     string = Atom.to_string(module)
     if String.starts_with?(string, "Elixir."), do: string, else: ":#{string}"
+  end
+
+  defp from_location(function, opts) do
+    %{
+      file: opts |> Keyword.get(:file, ~c"unknown") |> List.to_string(),
+      line: Keyword.get(opts, :line, 0),
+      function: function
+    }
   end
 
   defp format_function("", function), do: function

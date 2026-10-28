@@ -55,6 +55,9 @@ params and headers. These no longer crash the worker:
 * A message that the worker does not expect.
 * `Airbrake.monitor/1` with something other than a pid or an atom, such as a
   `{:via, module, name}` tuple. It now returns `{:error, ArgumentError}`.
+* A keyword list for `:context`, `:session`, or `:env`, or params that are not
+  a map, when the worker adds the details from `Airbrake.Plug` or
+  `Airbrake.Channel`. A keyword list is now merged like a map.
 
 **Plug and Channel details:** `Airbrake.Plug` and `Airbrake.Channel` add their
 details to the notice from `Airbrake.LoggerBackend` for an exception with a

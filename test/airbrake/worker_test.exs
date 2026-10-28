@@ -132,6 +132,48 @@ defmodule Airbrake.WorkerTest do
         refute Map.has_key?(Poison.decode!(payload)["context"], "component")
       end
     end
+
+    property "merges a keyword list with the remembered details" do
+      stub(Airbrake.MockHTTPoison, :post, airbrake_post_mock_fun())
+      exception = [type: "RuntimeError", message: "boom"]
+
+      check all key <- member_of([:context, :session]),
+                value <- string(:alphanumeric) do
+        Airbrake.Worker.remember(exception, [{key, %{remembered: "detail"}}])
+
+        Airbrake.Worker.report(exception, [{key, [reported: value]}])
+
+        assert_receive {:airbrake_report, %{payload: payload}}, 500
+        assert %{"remembered" => "detail", "reported" => ^value} = Poison.decode!(payload)[to_string(key)]
+      end
+    end
+
+    property "posts a notice for params of any kind", %{worker_pid: worker_pid} do
+      stub(Airbrake.MockHTTPoison, :post, airbrake_post_mock_fun())
+      exception = [type: "RuntimeError", message: "boom"]
+
+      check all reported <-
+                  one_of([
+                    constant(nil),
+                    string(:alphanumeric),
+                    list_of(integer()),
+                    map_of(atom(:alphanumeric), integer())
+                  ]),
+                remembered <-
+                  one_of([
+                    constant(nil),
+                    string(:alphanumeric),
+                    list_of(integer()),
+                    map_of(atom(:alphanumeric), integer())
+                  ]) do
+        Airbrake.Worker.remember(exception, params: remembered)
+
+        Airbrake.Worker.report(exception, params: reported)
+
+        assert_receive {:airbrake_report, _}, 500
+        assert %State{} = :sys.get_state(worker_pid)
+      end
+    end
   end
 
   describe "monitor/1" do

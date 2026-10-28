@@ -92,7 +92,7 @@ defmodule Airbrake.Worker do
     if same_exception?(exception, remembered) do
       enhanced_options =
         Enum.reduce([:context, :params, :session, :env], options, fn key, enhanced_options ->
-          Keyword.put(enhanced_options, key, Map.merge(options[key] || %{}, details[key] || %{}))
+          Keyword.put(enhanced_options, key, merge_detail(options[key], details[key]))
         end)
 
       Notice.post_notice(exception, stacktrace, enhanced_options)
@@ -150,6 +150,18 @@ defmodule Airbrake.Worker do
        do: message == remembered_message |> String.split("\n", parts: 2) |> hd()
 
   defp same_exception?(_exception, _remembered), do: false
+
+  # The remembered detail wins. An option can be a keyword list, and params can be any term.
+  defp merge_detail(option, detail) do
+    case {as_map(option || %{}), as_map(detail || %{})} do
+      {%{} = option, %{} = detail} -> Map.merge(option, detail)
+      {option, detail} when detail == %{} -> option
+      {_option, detail} -> detail
+    end
+  end
+
+  defp as_map(value) when is_list(value), do: if(Keyword.keyword?(value), do: Map.new(value), else: value)
+  defp as_map(value), do: value
 
   # So that Airbrake can group properly:
   # * A monitored name is the context.component since it remains constant.

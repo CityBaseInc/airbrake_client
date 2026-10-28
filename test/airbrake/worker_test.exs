@@ -134,6 +134,16 @@ defmodule Airbrake.WorkerTest do
     end
   end
 
+  describe "monitor/1" do
+    property "returns an error for anything other than a pid or an atom", %{worker_pid: worker_pid} do
+      check all target <- term(),
+                not is_pid(target) and not is_atom(target) do
+        assert Airbrake.Worker.monitor(target) == {:error, ArgumentError}
+        assert %State{} = :sys.get_state(worker_pid)
+      end
+    end
+  end
+
   describe "an unexpected message" do
     property "does not crash the worker", %{worker_pid: worker_pid} do
       check all message <- term(),

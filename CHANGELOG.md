@@ -53,6 +53,8 @@ params and headers. These no longer crash the worker:
   stacktrace of the error with arities instead of args. Before, it had their
   messages, which can have sensitive data.
 * A message that the worker does not expect.
+* `Airbrake.monitor/1` with something other than a pid or an atom, such as a
+  `{:via, module, name}` tuple. It now returns `{:error, ArgumentError}`.
 
 **Plug and Channel details:** `Airbrake.Plug` and `Airbrake.Channel` add their
 details to the notice from `Airbrake.LoggerBackend` for an exception with a

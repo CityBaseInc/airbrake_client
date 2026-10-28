@@ -58,9 +58,13 @@ defmodule Airbrake.Worker do
     {:error, ArgumentError}
   end
 
-  @spec monitor(pid() | atom()) :: :ok
-  def monitor(pid_or_reg_name) do
+  @spec monitor(pid() | atom()) :: :ok | {:error, ArgumentError}
+  def monitor(pid_or_reg_name) when is_pid(pid_or_reg_name) or is_atom(pid_or_reg_name) do
     GenServer.cast(@name, {:monitor, pid_or_reg_name})
+  end
+
+  def monitor(_) do
+    {:error, ArgumentError}
   end
 
   @spec start_link() :: GenServer.on_start()

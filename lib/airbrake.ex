@@ -114,6 +114,9 @@ defmodule Airbrake do
   the name is the `component` of the context. The session has the inspected
   process as `process`.
 
+  Returns `{:error, ArgumentError}` for anything other than a pid or an atom,
+  such as a `{:via, module, name}` tuple.
+
   Examples:
 
   With a given PID:
@@ -126,7 +129,7 @@ defmodule Airbrake do
         String.upcase(nil)
       end) |> Airbrake.monitor
   """
-  @spec monitor(pid() | atom()) :: :ok
+  @spec monitor(pid() | atom()) :: :ok | {:error, ArgumentError}
   defdelegate monitor(pid_or_reg_name), to: Airbrake.Worker
 
   @doc """

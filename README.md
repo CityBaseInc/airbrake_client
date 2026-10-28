@@ -26,6 +26,20 @@ A requirement has to name the pre-release to match a release candidate
 (`"~> 3.0"` does not match `3.0.0-rc.0`). Use `"~> 3.0"` once 3.0.0 is
 released.
 
+### Choose a JSON library
+
+`airbrake_client` sends each notice as JSON, and its `:payload_processor`
+config option picks the JSON library. Choose one of these:
+
+* `Airbrake.JsonPayloadProcessor` uses the `JSON` module in Elixir 1.18+ (or
+  `:json` in Erlang/OTP 27+ with Elixir 1.17). It needs no other dependency.
+* `Airbrake.JasonPayloadProcessor` needs `{:jason, "~> 1.0"}`.
+* `Airbrake.PoisonPayloadProcessor` needs `{:poison, ">= 2.0.0"}`. This is the
+  default.
+
+If you don't set `:payload_processor` and don't have `poison`, your app does not
+start. See ["Payload Processor"](payload_processor.html).
+
 ## Configuration
 
 Configure `:airbrake_client` in your `config/*.exs` files. Only the `:api_key`
@@ -81,6 +95,68 @@ end
   Processor"](payload_processor.html).
 * `:ignore` - errors not to report, or `:all` to report none. See ["Ignoring
   Errors"](ignoring_errors.html), and `Airbrake.Test` for testing your app.
+
+## Typical Phoenix setup
+
+Most errors in a Phoenix app are reported from the log by
+`Airbrake.LoggerBackend`. `Airbrake.Plug` and `Airbrake.Channel` add the
+details of the request or channel to those notices, so they need the backend.
+
+Add `logger_backends` with `airbrake_client`:
+
+```elixir
+# mix.exs
+defp deps do
+  [
+    {:airbrake_client, "~> 3.0.0-rc"},
+    {:logger_backends, "~> 1.0"}
+  ]
+end
+```
+
+Filter sensitive params and headers. Cookies are in the `"cookie"` header:
+
+```elixir
+# config/config.exs
+config :airbrake_client,
+  api_key: "placeholder",
+  project_id: 0,
+  payload_processor: Airbrake.JsonPayloadProcessor,
+  filter_parameters: ["password", "token"],
+  filter_headers: ["authorization", "cookie"]
+```
+
+Add the backend when your app starts:
+
+```elixir
+# lib/my_app/application.ex
+def start(_type, _args) do
+  LoggerBackends.add({Airbrake.LoggerBackend, :error})
+  # ...
+end
+```
+
+Use `Airbrake.Plug` in your router and `Airbrake.Channel` in your channels:
+
+```elixir
+# lib/my_app_web/router.ex
+defmodule MyAppWeb.Router do
+  use MyAppWeb, :router
+  use Airbrake.Plug
+  # ...
+end
+
+# lib/my_app_web.ex
+def channel do
+  quote do
+    use Phoenix.Channel
+    use Airbrake.Channel
+  end
+end
+```
+
+See `Airbrake.LoggerBackend` for what the backend reports, including a warning
+about sensitive data in the log.
 
 ## Usage
 

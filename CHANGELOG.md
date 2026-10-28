@@ -32,6 +32,14 @@ error in `handle_in/3` for a payload that is not a map, such as
 `{:binary, data}`, no longer crashes the worker either. The payload is in the
 params as `payload`.
 
+**JSON payload processor:** `Airbrake.JsonPayloadProcessor` encodes `nil` as
+`null`. Before, it encoded `nil` as the string `"nil"`, including the
+`params`, `session`, and `environment` of a notice without them. It now uses
+`JSON` from Elixir 1.18+. With Elixir 1.17, it still uses `:json`. Like
+`Airbrake.JasonPayloadProcessor`, it encodes dates and times as ISO 8601
+strings and fails for other structs in the context, the session, or the
+environment. `:json` encoded a struct as a map with a `__struct__` key.
+
 **Anonymous function frames:** A stacktrace with an anonymous function frame
 (`{fun, arity, location}`) is now reported. Before, the notice failed, and
 the worker crashed.

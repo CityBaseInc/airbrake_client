@@ -12,8 +12,9 @@ defmodule Airbrake.PayloadProcessor do
   Three implementations are provided:
   * `Airbrake.JasonPayloadProcessor` for the [`jason`
     library](https://hex.pm/packages/jason).
-  * `Airbrake.JsonPayloadProcessor` for [`:json` provided in Erlang
-    27+](https://www.erlang.org/doc/apps/stdlib/json.html).
+  * `Airbrake.JsonPayloadProcessor` for `JSON` in Elixir 1.18+, or for
+    [`:json`](https://www.erlang.org/doc/apps/stdlib/json.html) in Erlang/OTP
+    27+ with Elixir 1.17. It needs no other library.
   * `Airbrake.PoisonPayloadProcessor` for the [`poison`
     library](https://hex.pm/packages/poison).
 

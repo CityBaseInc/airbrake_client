@@ -26,11 +26,14 @@ library which you have to explicitly specify.
       `Airbrake.Utils.filter/2`, and `Airbrake.Utils.detuple/1`.
     * `process_headers/2` calls `Airbrake.Utils.filter/2`.
     * `encode!/1` calls `Jason.encode!/1`.
-* `Airbrake.JsonPayloadProcessor` (available with OTP 27.0+)
+* `Airbrake.JsonPayloadProcessor` (available with Erlang/OTP 27+, no other
+  dependency)
     * `process_params/2` calls `Airbrake.Utils.destruct/1`,
       `Airbrake.Utils.filter/2`, and `Airbrake.Utils.detuple/1`.
     * `process_headers/2` calls `Airbrake.Utils.filter/2`.
-    * `encode!/1` calls `:json.encode/1`.
+    * `encode!/1` calls `JSON.encode!/1` in Elixir 1.18+. Elixir 1.17 does
+      not have `JSON`, so it calls `:json.encode/2` with `nil` encoded as
+      `null`.
 
 You can write your own payload processor if you like.  See the
 `Airbrake.PayloadProcessor` behaviour for more details.

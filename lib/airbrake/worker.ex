@@ -122,6 +122,11 @@ defmodule Airbrake.Worker do
     {:noreply, Map.put(state, :refs, refs)}
   end
 
+  # Without this clause, an unexpected message crashes the worker.
+  def handle_info(_message, state) do
+    {:noreply, state}
+  end
+
   defp get_stacktrace do
     {:current_stacktrace, stacktrace} = Process.info(self(), :current_stacktrace)
     stacktrace

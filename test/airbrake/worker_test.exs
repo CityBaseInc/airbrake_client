@@ -134,6 +134,17 @@ defmodule Airbrake.WorkerTest do
     end
   end
 
+  describe "an unexpected message" do
+    property "does not crash the worker", %{worker_pid: worker_pid} do
+      check all message <- term(),
+                not match?({:DOWN, _, _, _, _}, message) do
+        send(worker_pid, message)
+
+        assert %State{} = :sys.get_state(worker_pid)
+      end
+    end
+  end
+
   @spec atomize_keys(any()) :: map()
   defp atomize_keys(map) when is_map(map) do
     map

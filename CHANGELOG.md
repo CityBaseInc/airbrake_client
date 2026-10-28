@@ -52,6 +52,7 @@ params and headers. These no longer crash the worker:
   has only the type of the original exception, the type of the error, and the
   stacktrace of the error with arities instead of args. Before, it had their
   messages, which can have sensitive data.
+* A message that the worker does not expect.
 
 **Plug and Channel details:** `Airbrake.Plug` and `Airbrake.Channel` add their
 details to the notice from `Airbrake.LoggerBackend` for an exception with a

@@ -68,6 +68,8 @@ messages.
   exception instead of the stacktrace of the caller. The `** ` lines around
   it, such as `** (stop) exited in: GenServer.call(...)`, are in the session
   as `reason`.
+* The backend is no longer removed from `Logger` when it fails to handle a
+  log message. It prints a warning with the type of the error to stderr.
 * The backend no longer creates atoms from the text of log messages.
 * The backend no longer prints exceptions with `IO.inspect/1`.
 * The docs explain how to set up the backend with `logger_backends` and describe

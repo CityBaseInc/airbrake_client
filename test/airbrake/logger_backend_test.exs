@@ -332,6 +332,16 @@ defmodule Airbrake.LoggerBackendTest do
       end
     end
 
+    property "never raises for chardata that is not valid Unicode" do
+      check all prefix <- string(:printable),
+                bytes <- filter(binary(min_length: 1), &(not String.valid?(&1))) do
+        message = [prefix, "** (RuntimeError) boom", bytes]
+
+        assert ExUnit.CaptureIO.capture_io(:stderr, fn -> assert log_error(message) == {:ok, nil} end) =~
+                 "UnicodeConversionError"
+      end
+    end
+
     property "never raises, whatever the message" do
       stub(MockHTTPoison, :post, fn _url, _payload, _headers -> {:ok, %HTTPoison.Response{status_code: 201}} end)
 

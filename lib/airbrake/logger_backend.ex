@@ -114,6 +114,12 @@ defmodule Airbrake.LoggerBackend do
     end
 
     {:ok, state}
+  rescue
+    # Raising would remove this handler. The message of the exception might have sensitive data, so warn with just
+    # its type, and not with Logger, which would call this handler again.
+    exception ->
+      IO.warn("airbrake_client could not report a log message: #{inspect(exception.__struct__)}", [])
+      {:ok, state}
   end
 
   def handle_event(_, state) do

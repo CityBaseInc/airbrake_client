@@ -6,6 +6,14 @@ Breaking changes:
 * The minimum Elixir version is now 1.17. Elixir 1.16 only runs on Erlang/OTP
   versions that have reached end of life. CI tests Elixir 1.17 through 1.20 on
   Erlang/OTP 27 through 29.
+* Only Erlang/OTP 27 and later are supported. Erlang/OTP 26 reached end of life
+  on 26 May 2026.
+* `Airbrake.JsonPayloadProcessor` is the default `:payload_processor` instead of
+  `Airbrake.PoisonPayloadProcessor`, so the default needs no JSON library. If
+  you rely on the default and want to keep Poison, set
+  `payload_processor: Airbrake.PoisonPayloadProcessor`. On Erlang/OTP 25 or 26,
+  which do not have `:json`, set `:payload_processor` to
+  `Airbrake.JasonPayloadProcessor` or `Airbrake.PoisonPayloadProcessor`.
 * `httpoison` 1.x is no longer supported. `httpoison` 2.x and 3.x are supported.
   `httpoison` 3.x uses `hackney` 4.x, which requires Erlang/OTP 26 or later.
 * `use Airbrake.GenServer` is no longer supported, and it raises an error at

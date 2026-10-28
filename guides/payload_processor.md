@@ -13,20 +13,10 @@ used when processing the payload sent to Airbrake.
 
 `airbrake_client` comes with three implementations of
 `Airbrake.PayloadProcessor`, and any of them can be used for the
-`:payload_processor` config attribute.  Each one has a dependency on another
-library which you have to explicitly specify.
+`:payload_processor` config attribute.  The Jason and Poison processors need
+you to add their library to your dependencies.
 
-* `Airbrake.PoisonPayloadProcessor` (default, depends on `poison`)
-    * `process_params/2` calls `Airbrake.Utils.destruct/1`,
-      `Airbrake.Utils.filter/2`, and `Airbrake.Utils.detuple/1`.
-    * `process_headers/2` calls `Airbrake.Utils.filter/2`.
-    * `encode!/1` calls `Poison.encode!/1`.
-* `Airbrake.JasonPayloadProcessor` (depends on `jason`)
-    * `process_params/2` calls `Airbrake.Utils.destruct/1`,
-      `Airbrake.Utils.filter/2`, and `Airbrake.Utils.detuple/1`.
-    * `process_headers/2` calls `Airbrake.Utils.filter/2`.
-    * `encode!/1` calls `Jason.encode!/1`.
-* `Airbrake.JsonPayloadProcessor` (available with Erlang/OTP 27+, no other
+* `Airbrake.JsonPayloadProcessor` (default, needs Erlang/OTP 27+ and no other
   dependency)
     * `process_params/2` calls `Airbrake.Utils.destruct/1`,
       `Airbrake.Utils.filter/2`, and `Airbrake.Utils.detuple/1`.
@@ -34,6 +24,20 @@ library which you have to explicitly specify.
     * `encode!/1` calls `JSON.encode!/1` in Elixir 1.18+. Elixir 1.17 does
       not have `JSON`, so it calls `:json.encode/2` with `nil` encoded as
       `null`.
+* `Airbrake.JasonPayloadProcessor` (depends on `jason`)
+    * `process_params/2` calls `Airbrake.Utils.destruct/1`,
+      `Airbrake.Utils.filter/2`, and `Airbrake.Utils.detuple/1`.
+    * `process_headers/2` calls `Airbrake.Utils.filter/2`.
+    * `encode!/1` calls `Jason.encode!/1`.
+* `Airbrake.PoisonPayloadProcessor` (depends on `poison`)
+    * `process_params/2` calls `Airbrake.Utils.destruct/1`,
+      `Airbrake.Utils.filter/2`, and `Airbrake.Utils.detuple/1`.
+    * `process_headers/2` calls `Airbrake.Utils.filter/2`.
+    * `encode!/1` calls `Poison.encode!/1`.
+
+On Erlang/OTP 25 or 26, which `airbrake_client` does not support, set
+`:payload_processor` to `Airbrake.JasonPayloadProcessor` or
+`Airbrake.PoisonPayloadProcessor`.
 
 You can write your own payload processor if you like.  See the
 `Airbrake.PayloadProcessor` behaviour for more details.

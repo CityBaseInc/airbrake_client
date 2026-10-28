@@ -25,17 +25,19 @@ defmodule Airbrake.LoggerBackendTest do
     test "sends the error via the HTTP handler" do
       error_message = "** (FunctionClauseError) no function clause matching in Enum.join/2"
 
-      expected_payload_errors =
-        "\"errors\":[{\"type\":\"FunctionClauseError\",\"message\":\"no function clause matching in Enum.join/2\",\"backtrace\":[]}]"
-
       expect(MockHTTPoison, :post, airbrake_post_mock_fun())
 
       assert capture_log(fn ->
                Logger.error(error_message)
              end) =~ error_message
 
-      assert_receive {:airbrake_report, %{payload: payload}}, 500
-      assert payload =~ expected_payload_errors
+      assert %{"errors" => [error]} = receive_payload()
+
+      assert error == %{
+               "type" => "FunctionClauseError",
+               "message" => "no function clause matching in Enum.join/2",
+               "backtrace" => []
+             }
     end
 
     test "raises Airbrake for RuntimeError from raise" do

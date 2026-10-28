@@ -26,19 +26,21 @@ A requirement has to name the pre-release to match a release candidate
 (`"~> 3.0"` does not match `3.0.0-rc.0`). Use `"~> 3.0"` once 3.0.0 is
 released.
 
-### Choose a JSON library
+`airbrake_client` supports Elixir 1.17+ on Erlang/OTP 27+.
+
+### JSON library
 
 `airbrake_client` sends each notice as JSON, and its `:payload_processor`
-config option picks the JSON library. Choose one of these:
+config option picks the JSON library:
 
-* `Airbrake.JsonPayloadProcessor` uses the `JSON` module in Elixir 1.18+ (or
-  `:json` in Erlang/OTP 27+ with Elixir 1.17). It needs no other dependency.
+* `Airbrake.JsonPayloadProcessor` (the default) uses the `JSON` module in
+  Elixir 1.18+ (or `:json` with Elixir 1.17). It needs no other dependency.
 * `Airbrake.JasonPayloadProcessor` needs `{:jason, "~> 1.0"}`.
-* `Airbrake.PoisonPayloadProcessor` needs `{:poison, ">= 2.0.0"}`. This is the
-  default.
+* `Airbrake.PoisonPayloadProcessor` needs `{:poison, ">= 2.0.0"}`.
 
-If you don't set `:payload_processor` and don't have `poison`, your app does not
-start. See ["Payload Processor"](payload_processor.html).
+`Airbrake.JsonPayloadProcessor` needs Erlang/OTP 27+. On an earlier version, set
+`:payload_processor` to one of the others. See ["Payload
+Processor"](payload_processor.html).
 
 ## Configuration
 
@@ -90,7 +92,7 @@ end
 * `:filter_parameters` - (list of strings) keys of sensitive params to filter.
   See `Airbrake.Utils.filter/2`.
 * `:filter_headers` - (list of strings) HTTP headers to filter.
-* `:payload_processor` - (module, defaults to `Airbrake.PoisonPayloadProcessor`)
+* `:payload_processor` - (module, defaults to `Airbrake.JsonPayloadProcessor`)
   processes and encodes the payload. See ["Payload
   Processor"](payload_processor.html).
 * `:ignore` - errors not to report, or `:all` to report none. See ["Ignoring
@@ -121,7 +123,6 @@ Filter sensitive params and headers. Cookies are in the `"cookie"` header:
 config :airbrake_client,
   api_key: "placeholder",
   project_id: 0,
-  payload_processor: Airbrake.JsonPayloadProcessor,
   filter_parameters: ["password", "token"],
   filter_headers: ["authorization", "cookie"]
 ```

@@ -26,7 +26,8 @@ defmodule Airbrake.Channel do
   The context of the notice has the channel module as its `component`, the
   event (or `"join"`, `"handle_info"`, or `"terminate"`) as its `action`, and
   the topic as its `route`. The params are the payload of the message, and the
-  session is the assigns of the socket.
+  session is the assigns of the socket. A payload that is not a map, such as
+  `{:binary, data}`, is in the params as `payload`.
   """
 
   defmacro __using__(_env) do
@@ -51,7 +52,9 @@ defmodule Airbrake.Channel do
         super(msg_type, msg, socket)
       rescue
         exception ->
-          send_to_airbrake(exception, __STACKTRACE__, socket, msg, msg_type, socket.topic)
+          # The payload is not a map for a binary message ({:binary, data}).
+          params = if is_map(msg), do: msg, else: %{payload: msg}
+          send_to_airbrake(exception, __STACKTRACE__, socket, params, msg_type, socket.topic)
       end
 
       def handle_info(msg, socket) do

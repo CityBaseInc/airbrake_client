@@ -50,6 +50,18 @@ defmodule Airbrake.ChannelTest do
         refute Map.has_key?(context, "msg_type")
       end
     end
+
+    property "remembers a binary payload in the params" do
+      stub(MockHTTPoison, :post, airbrake_post_mock_fun())
+
+      check all data <- string(:alphanumeric) do
+        exception = catch_error(RoomChannel.handle_in("upload", {:binary, data}, @socket))
+        Airbrake.report(exception)
+
+        %{"params" => params} = receive_payload()
+        assert params == %{"payload" => ["binary", data]}
+      end
+    end
   end
 
   describe "with Airbrake.LoggerBackend" do

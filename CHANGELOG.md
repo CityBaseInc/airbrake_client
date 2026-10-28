@@ -26,7 +26,10 @@ Breaking changes:
   `:filter_headers` can filter them.
 
 **Channel errors:** An error in the `handle_info/2` callback of a channel no
-longer crashes the worker. The message is in the params as `message`.
+longer crashes the worker. The message is in the params as `message`. An
+error in `handle_in/3` for a payload that is not a map, such as
+`{:binary, data}`, no longer crashes the worker either. The payload is in the
+params as `payload`.
 
 **Anonymous function frames:** A stacktrace with an anonymous function frame
 (`{fun, arity, location}`) is now reported. Before, the notice failed, and

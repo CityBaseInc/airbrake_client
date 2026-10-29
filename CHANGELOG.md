@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## v3.0.0 (2026-10-29)
+
+If you are upgrading from 2.x, read the changes in v3.0.0-rc.1 and
+v3.0.0-rc.0 below as well.
+
+This release removes everything that the release candidates deprecated. To find
+what you need to change, upgrade to 3.0.0-rc.1 first. It warns about each use
+of a deprecated function or config option, which can be easier to track down
+than the compile errors and validation errors in 3.0.0.
 
 Breaking changes:
 * The deprecated `:json_encoder` and `:environment` config options are removed.

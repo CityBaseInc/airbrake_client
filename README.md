@@ -17,14 +17,10 @@ Add `airbrake_client` to your dependencies:
 ```elixir
 defp deps do
   [
-    {:airbrake_client, "~> 3.0.0-rc"}
+    {:airbrake_client, "~> 3.0"}
   ]
 end
 ```
-
-A requirement has to name the pre-release to match a release candidate
-(`"~> 3.0"` does not match `3.0.0-rc.0`). Use `"~> 3.0"` once 3.0.0 is
-released.
 
 `airbrake_client` supports Elixir 1.17+ on Erlang/OTP 27+.
 
@@ -110,7 +106,7 @@ Add `logger_backends` with `airbrake_client`:
 # mix.exs
 defp deps do
   [
-    {:airbrake_client, "~> 3.0.0-rc"},
+    {:airbrake_client, "~> 3.0"},
     {:logger_backends, "~> 1.0"}
   ]
 end

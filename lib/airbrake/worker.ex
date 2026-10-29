@@ -195,9 +195,4 @@ defmodule Airbrake.Worker do
   # * The pid is different for each process, so it goes in the session.
   defp monitor_options(pid, pid), do: [session: %{process: inspect(pid)}]
   defp monitor_options(name, pid), do: [context: %{component: inspect(name)}, session: %{process: inspect(pid)}]
-
-  @deprecated "Use Airbrake.Config.get/2 instead."
-  @spec get_env(atom(), term()) :: term()
-  def get_env(key, default \\ nil),
-    do: Config.get(key, default)
 end

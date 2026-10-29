@@ -8,6 +8,8 @@ Breaking changes:
   longer starts if either is set, with the error `unknown config key`.
 * The deprecated `Airbrake.destruct/1` and `Airbrake.detuple/1` are removed.
   Use `Airbrake.Utils.destruct/1` and `Airbrake.Utils.detuple/1` instead.
+* The deprecated `Airbrake.Worker.get_env/2` is removed. Use
+  `Airbrake.Config.get/2` instead.
 
 ## v3.0.0-rc.1 (2026-10-29)
 

@@ -78,13 +78,6 @@ defmodule Airbrake.GenServer do
 
   def report_termination(reason, options), do: report_other_reason(reason, options)
 
-  @doc """
-  Reports the termination of a process. Use `report_termination/2` instead.
-  """
-  @deprecated "Use Airbrake.GenServer.report_termination/2 instead."
-  @spec handle_terminate(term(), map()) :: nil | :ok | {:error, ArgumentError}
-  def handle_terminate(reason, context), do: report_termination(reason, context: context)
-
   defp stacktrace?([_ | _] = stacktrace), do: Enum.all?(stacktrace, &stacktrace_entry?/1)
   defp stacktrace?(_), do: false
 

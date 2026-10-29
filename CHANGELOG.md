@@ -10,6 +10,9 @@ Breaking changes:
   Use `Airbrake.Utils.destruct/1` and `Airbrake.Utils.detuple/1` instead.
 * The deprecated `Airbrake.Worker.get_env/2` is removed. Use
   `Airbrake.Config.get/2` instead.
+* The deprecated `Airbrake.GenServer.handle_terminate/2` is removed. Use
+  `Airbrake.GenServer.report_termination/2` instead, with the context as the
+  `:context` option.
 
 ## v3.0.0-rc.1 (2026-10-29)
 

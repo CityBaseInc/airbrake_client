@@ -93,6 +93,7 @@ defmodule Airbrake.Mixfile do
         "guides/shared_options.md",
         "guides/context_environment.md",
         "guides/session.md",
+        "guides/testing_integration.md",
         "guides/developing.md",
         "guides/migrating.md"
       ],

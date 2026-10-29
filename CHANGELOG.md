@@ -115,6 +115,10 @@ messages.
 * The docs explain how to set up the backend with `logger_backends` and describe
   what the backend reports, with a warning about sensitive data.
 
+**Testing an integration:** A new guide, "Testing an Integration", has examples
+that post real notices so that you can check that your app sends them to
+Airbrake.
+
 ## v3.0.0-rc.0 (2026-04-17)
 
 The v3.0.0 release makes configuration and JSON encoding much better and less

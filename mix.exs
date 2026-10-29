@@ -4,7 +4,7 @@ defmodule Airbrake.Mixfile do
   def project do
     [
       app: :airbrake_client,
-      version: "3.0.0-rc.0",
+      version: "3.0.0-rc.1",
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),

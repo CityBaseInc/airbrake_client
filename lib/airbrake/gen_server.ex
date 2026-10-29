@@ -30,15 +30,6 @@ defmodule Airbrake.GenServer do
   `Airbrake.monitor/1` instead.
   """
 
-  # Explains how to replace `use Airbrake.GenServer` during the 3.0 release candidates. Remove it in 3.0.0.
-  @doc false
-  defmacro __using__(_opts) do
-    raise """
-    use Airbrake.GenServer is no longer supported. Use GenServer, and call \
-    Airbrake.GenServer.report_termination/2 from the terminate/2 callback instead.\
-    """
-  end
-
   @doc """
   Reports the termination of a process for the termination `reason` when the
   process terminates abnormally.

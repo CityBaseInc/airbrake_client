@@ -119,20 +119,6 @@ defmodule Airbrake.GenServerTest do
     end
   end
 
-  describe "use Airbrake.GenServer" do
-    test "raises an error that says to use report_termination/2" do
-      assert_raise RuntimeError, ~r/Airbrake\.GenServer\.report_termination\/2/, fn ->
-        Code.compile_quoted(
-          quote do
-            defmodule Airbrake.GenServerTest.UsesAirbrakeGenServer do
-              use Airbrake.GenServer
-            end
-          end
-        )
-      end
-    end
-  end
-
   describe "with a GenServer" do
     test "reports a crash from terminate/2" do
       expect(MockHTTPoison, :post, airbrake_post_mock_fun())

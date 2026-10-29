@@ -18,7 +18,3 @@ config :airbrake_client,
 
 If `KUBERNETES_CLUSTER` is `"prod"`, then `notice.context.environment` will be
 set to `"production"`.
-
-`:environment` is a deprecated attribute for `:context_environment`.  You will
-get a warning when the app starts if you set it.  `:context_environment` has a
-higher priority if you specify both.

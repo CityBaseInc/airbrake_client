@@ -12,31 +12,12 @@ defmodule Airbrake.ConfigTest do
 
   describe "context_environment/0" do
     property "returns string from :context_environment of config" do
-      check all context_environment <- context_environment(),
-                environment <- context_environment(),
-                context_environment != environment do
+      check all context_environment <- context_environment() do
         MockConfig
-        |> stub(:get, fn
-          :environment -> environment
-          :context_environment -> context_environment
-        end)
+        |> stub(:get, fn :context_environment -> context_environment end)
         |> stub(:get, fn :production_aliases, [] -> [] end)
 
         assert Config.context_environment(MockConfig) == context_environment
-        assert Config.context_environment(MockConfig) != environment
-      end
-    end
-
-    property "returns string from :environment of config" do
-      check all environment <- context_environment() do
-        MockConfig
-        |> stub(:get, fn
-          :environment -> environment
-          :context_environment -> nil
-        end)
-        |> stub(:get, fn :production_aliases, [] -> [] end)
-
-        assert Config.context_environment(MockConfig) == environment
       end
     end
 
@@ -72,42 +53,9 @@ defmodule Airbrake.ConfigTest do
       assert Config.payload_processor(MockConfig) == Airbrake.JasonPayloadProcessor
     end
 
-    test "falls back to Jason module when :json_encoder is Jason" do
+    test "defaults to Airbrake.JsonPayloadProcessor when :payload_processor is not set" do
       MockConfig
-      |> stub(:get, fn
-        :payload_processor -> nil
-        :json_encoder -> Jason
-      end)
-
-      assert Config.payload_processor(MockConfig) == Airbrake.JasonPayloadProcessor
-    end
-
-    test "falls back to Json module when :json_encoder is :json" do
-      MockConfig
-      |> stub(:get, fn
-        :payload_processor -> nil
-        :json_encoder -> :json
-      end)
-
-      assert Config.payload_processor(MockConfig) == Airbrake.JsonPayloadProcessor
-    end
-
-    test "falls back to Poison module when :json_encoder is Poison" do
-      MockConfig
-      |> stub(:get, fn
-        :payload_processor -> nil
-        :json_encoder -> Poison
-      end)
-
-      assert Config.payload_processor(MockConfig) == Airbrake.PoisonPayloadProcessor
-    end
-
-    test "defaults to Json module when neither is configured" do
-      MockConfig
-      |> stub(:get, fn
-        :payload_processor -> nil
-        :json_encoder -> nil
-      end)
+      |> stub(:get, fn :payload_processor -> nil end)
 
       assert Config.payload_processor(MockConfig) == Airbrake.JsonPayloadProcessor
     end

@@ -1,8 +1,6 @@
 defmodule Airbrake.Config.ValidatorTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureIO
-
   alias Airbrake.Config.Validator
 
   @valid_config [api_key: "test_key", project_id: 123]
@@ -17,26 +15,21 @@ defmodule Airbrake.Config.ValidatorTest do
     end
 
     test "passes with all optional keys" do
-      warnings =
-        capture_io(:stderr, fn ->
-          assert :ok =
-                   Validator.validate(
-                     config(
-                       host: "https://errbit.example.com",
-                       payload_processor: Airbrake.JasonPayloadProcessor,
-                       filter_parameters: ["password", "secret"],
-                       filter_headers: ["authorization"],
-                       production_aliases: ["prod", "production-us"],
-                       session: :include_logger_metadata,
-                       ignore: :all,
-                       options: [context: %{app: "test"}],
-                       context_environment: "staging",
-                       private: [http_adapter: HTTPoison]
-                     )
-                   )
-        end)
-
-      assert warnings == ""
+      assert :ok =
+               Validator.validate(
+                 config(
+                   host: "https://errbit.example.com",
+                   payload_processor: Airbrake.JasonPayloadProcessor,
+                   filter_parameters: ["password", "secret"],
+                   filter_headers: ["authorization"],
+                   production_aliases: ["prod", "production-us"],
+                   session: :include_logger_metadata,
+                   ignore: :all,
+                   options: [context: %{app: "test"}],
+                   context_environment: "staging",
+                   private: [http_adapter: HTTPoison]
+                 )
+               )
     end
   end
 
@@ -98,13 +91,6 @@ defmodule Airbrake.Config.ValidatorTest do
     test "rejects non-string host" do
       assert {:error, errors} = Validator.validate(config(host: :localhost))
       assert ":host must be a string, got :localhost" in errors
-    end
-
-    test "rejects non-module json_encoder" do
-      capture_io(:stderr, fn ->
-        assert {:error, errors} = Validator.validate(config(json_encoder: "Jason"))
-        assert ":json_encoder must be a module, got \"Jason\"" in errors
-      end)
     end
 
     test "rejects non-list filter_parameters" do
@@ -211,74 +197,15 @@ defmodule Airbrake.Config.ValidatorTest do
     end
   end
 
-  describe "validate/1 json_encoder availability" do
-    test "rejects an unavailable json_encoder module" do
-      capture_io(:stderr, fn ->
-        assert {:error, errors} = Validator.validate(config(json_encoder: NonExistent.Encoder))
-        assert "JSON encoder NonExistent.Encoder is not available" in errors
-      end)
+  describe "validate/1 removed keys" do
+    test "rejects :json_encoder" do
+      assert {:error, errors} = Validator.validate(config(json_encoder: Jason))
+      assert "unknown config key :json_encoder" in errors
     end
 
-    test "accepts an available json_encoder module" do
-      capture_io(:stderr, fn ->
-        assert :ok = Validator.validate(config(json_encoder: Jason))
-      end)
-    end
-
-    test "skips json_encoder check when payload_processor is set" do
-      assert :ok =
-               Validator.validate(config(payload_processor: Airbrake.JasonPayloadProcessor))
-    end
-
-    test "warns when both json_encoder and payload_processor are set" do
-      warning =
-        capture_io(:stderr, fn ->
-          Validator.validate(config(json_encoder: Jason, payload_processor: Airbrake.JasonPayloadProcessor))
-        end)
-
-      assert warning =~ ":json_encoder is ignored because :payload_processor is set to Airbrake.JasonPayloadProcessor"
-    end
-
-    test "does not error on unavailable json_encoder when payload_processor is set" do
-      capture_io(:stderr, fn ->
-        result =
-          Validator.validate(
-            config(json_encoder: NonExistent.Encoder, payload_processor: Airbrake.JasonPayloadProcessor)
-          )
-
-        send(self(), {:result, result})
-      end)
-
-      assert_received {:result, :ok}
-    end
-  end
-
-  describe "validate/1 deprecations" do
-    test "warns when :json_encoder is set" do
-      warning =
-        capture_io(:stderr, fn ->
-          Validator.validate(config(json_encoder: Jason))
-        end)
-
-      assert warning =~ ":json_encoder is deprecated, use :payload_processor instead"
-    end
-
-    test "warns when :environment is set" do
-      warning =
-        capture_io(:stderr, fn ->
-          Validator.validate(config(environment: "staging"))
-        end)
-
-      assert warning =~ ":environment is deprecated, use :context_environment instead"
-    end
-
-    test "does not warn when neither deprecated key is set" do
-      warning =
-        capture_io(:stderr, fn ->
-          Validator.validate(@valid_config)
-        end)
-
-      refute warning =~ "is deprecated"
+    test "rejects :environment" do
+      assert {:error, errors} = Validator.validate(config(environment: "staging"))
+      assert "unknown config key :environment" in errors
     end
   end
 

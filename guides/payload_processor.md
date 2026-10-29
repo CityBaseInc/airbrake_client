@@ -41,9 +41,3 @@ On Erlang/OTP 25 or 26, which `airbrake_client` does not support, set
 
 You can write your own payload processor if you like.  See the
 `Airbrake.PayloadProcessor` behaviour for more details.
-
-If set, `:payload_processor` is used, and `:json_encoder` (if set) is ignored.
-If you set `:json_encoder` instead of `:payload_processor`, the appropriate
-payload processor is used.  Any use of `:json_encoder` results in a warning that
-it is deprecated on start up.  It will be removed in a later 3.0 release
-candidate.

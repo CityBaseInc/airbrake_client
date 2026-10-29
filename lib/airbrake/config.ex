@@ -36,14 +36,14 @@ defmodule Airbrake.Config do
   @doc """
   Returns the name of the environment.
 
-  Checks `:context_environment`, then `:environment`, then falls back to
-  `hostname/0`. Values in `:production_aliases` are mapped to `"production"`.
+  Uses `:context_environment`, falling back to `hostname/0`. Values in
+  `:production_aliases` are mapped to `"production"`.
   """
   @impl Airbrake.Config.Behaviour
   @spec context_environment(module()) :: String.t()
   def context_environment(config \\ __MODULE__) do
     config_context_environment =
-      case config.get(:context_environment) || config.get(:environment) do
+      case config.get(:context_environment) do
         nil -> hostname()
         {:system, var} -> System.get_env(var, hostname())
         atom_env when is_atom(atom_env) -> to_string(atom_env)
@@ -59,15 +59,14 @@ defmodule Airbrake.Config do
   @doc """
   Returns the configured `Airbrake.PayloadProcessor` module.
 
-  When not set, falls back to `:json_encoder`, mapping it to the corresponding
-  module. If neither `:payload_processor` nor `:json_encoder` are set, defaults
-  to `Airbrake.JsonPayloadProcessor`.
+  Defaults to `Airbrake.JsonPayloadProcessor` when `:payload_processor` is not
+  set.
   """
   @impl Airbrake.Config.Behaviour
   @spec payload_processor(module()) :: module()
   def payload_processor(config \\ __MODULE__) do
     case config.get(:payload_processor) do
-      nil -> payload_processor_from_json_encoder(config)
+      nil -> Airbrake.JsonPayloadProcessor
       mod when is_atom(mod) -> mod
     end
   end
@@ -83,14 +82,6 @@ defmodule Airbrake.Config do
     case config.get(:project_id) do
       value when is_binary(value) -> String.to_integer(value)
       value -> value
-    end
-  end
-
-  defp payload_processor_from_json_encoder(config) do
-    case config.get(:json_encoder) do
-      Jason -> Airbrake.JasonPayloadProcessor
-      Poison -> Airbrake.PoisonPayloadProcessor
-      _ -> Airbrake.JsonPayloadProcessor
     end
   end
 

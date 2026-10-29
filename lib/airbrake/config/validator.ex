@@ -10,12 +10,10 @@ defmodule Airbrake.Config.Validator do
   @known_keys [
     :api_key,
     :context_environment,
-    :environment,
     :filter_headers,
     :filter_parameters,
     :host,
     :ignore,
-    :json_encoder,
     :options,
     :payload_processor,
     :private,
@@ -31,14 +29,12 @@ defmodule Airbrake.Config.Validator do
   """
   @spec validate(keyword()) :: :ok | {:error, [String.t()]}
   def validate(config \\ Application.get_all_env(:airbrake_client)) do
-    check_deprecations(config)
-
     errors =
       []
       |> check_unknown_keys(config)
       |> check_required(config)
       |> check_types(config)
-      |> check_json_encoder(config)
+      |> check_default_payload_processor(config)
       |> Enum.reverse()
 
     case errors do
@@ -113,11 +109,6 @@ defmodule Airbrake.Config.Validator do
 
   defp validate_type(:host, value), do: {:error, ":host must be a string, got #{inspect(value)}"}
 
-  defp validate_type(:json_encoder, value) when is_atom(value), do: :ok
-
-  defp validate_type(:json_encoder, value),
-    do: {:error, ":json_encoder must be a module, got #{inspect(value)}"}
-
   defp validate_type(:filter_parameters, value) when is_list(value) do
     if Enum.all?(value, &is_binary/1),
       do: :ok,
@@ -180,14 +171,6 @@ defmodule Airbrake.Config.Validator do
       {:error,
        ":context_environment must be a string, atom, {:system, var}, or 0-arity function, got #{inspect(value)}"}
 
-  defp validate_type(:environment, value) when is_binary(value), do: :ok
-  defp validate_type(:environment, value) when is_atom(value), do: :ok
-  defp validate_type(:environment, {:system, var}) when is_binary(var), do: :ok
-  defp validate_type(:environment, fun) when is_function(fun, 0), do: :ok
-
-  defp validate_type(:environment, value),
-    do: {:error, ":environment must be a string, atom, {:system, var}, or 0-arity function, got #{inspect(value)}"}
-
   @payload_processor_callbacks [{:process_params, 2}, {:process_headers, 2}, {:encode!, 1}]
 
   defp validate_type(:payload_processor, value) when is_atom(value) do
@@ -221,41 +204,10 @@ defmodule Airbrake.Config.Validator do
     end
   end
 
-  defp check_deprecations(config) do
-    if Keyword.has_key?(config, :json_encoder) do
-      IO.warn("airbrake_client: :json_encoder is deprecated, use :payload_processor instead")
-      :ok
-    end
-
-    if Keyword.has_key?(config, :environment) do
-      IO.warn("airbrake_client: :environment is deprecated, use :context_environment instead")
-      :ok
-    end
-  end
-
-  defp check_json_encoder(errors, config) do
-    has_payload_processor = Keyword.has_key?(config, :payload_processor)
-    has_json_encoder = Keyword.has_key?(config, :json_encoder)
-
+  defp check_default_payload_processor(errors, config) do
     cond do
-      has_payload_processor and has_json_encoder ->
-        processor = Keyword.fetch!(config, :payload_processor)
-
-        IO.warn("airbrake_client: :json_encoder is ignored because :payload_processor is set to #{inspect(processor)}")
-
+      Keyword.has_key?(config, :payload_processor) ->
         errors
-
-      has_payload_processor ->
-        errors
-
-      has_json_encoder ->
-        encoder = Keyword.fetch!(config, :json_encoder)
-
-        if is_atom(encoder) and not Code.ensure_loaded?(encoder) do
-          ["JSON encoder #{inspect(encoder)} is not available" | errors]
-        else
-          errors
-        end
 
       # Airbrake.JsonPayloadProcessor is the default, and it needs :json from Erlang/OTP 27+.
       Code.ensure_loaded?(Airbrake.JsonPayloadProcessor) ->

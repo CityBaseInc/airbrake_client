@@ -3,11 +3,8 @@ defmodule Airbrake do
   This module provides functions to report any kind of exception to
   [Airbrake](https://airbrake.io/) or [Errbit](http://errbit.com/).
 
-  `Airbrake.report/2` can be used to report directly to Airbrake.io.
-  `Airbrake.Plug` and `Airbrake.Channel` can be used to automatically report
-  errors from controllers or channels.
-
-  See [README](readme.html) for configuration and usage instructions.
+  See the [README](readme.html) for configuration and the other ways to report
+  errors.
   """
 
   use Application
@@ -112,6 +109,14 @@ defmodule Airbrake do
   If you don't want system-wide monitoring, but would like to monitor one specific process,
   then you could use `Airbrake.monitor/1`
 
+  When the process terminates abnormally, the notice is built like the one from
+  `Airbrake.GenServer.report_termination/2`. If you monitor a registered name,
+  the name is the `component` of the context. The session has the inspected
+  process as `process`.
+
+  Returns `{:error, ArgumentError}` for anything other than a pid or an atom,
+  such as a `{:via, module, name}` tuple.
+
   Examples:
 
   With a given PID:
@@ -124,7 +129,7 @@ defmodule Airbrake do
         String.upcase(nil)
       end) |> Airbrake.monitor
   """
-  @spec monitor(pid() | atom()) :: :ok
+  @spec monitor(pid() | atom()) :: :ok | {:error, ArgumentError}
   defdelegate monitor(pid_or_reg_name), to: Airbrake.Worker
 
   @doc """

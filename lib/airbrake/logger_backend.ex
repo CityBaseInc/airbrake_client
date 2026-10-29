@@ -1,23 +1,92 @@
 defmodule Airbrake.LoggerBackend do
   @moduledoc """
-  A `Logger` backend to post an Airbrake notice when the logger gets an error
-  message.
+  A `Logger` backend that posts an Airbrake notice when an error log message
+  contains a formatted exception.
 
-  If you are using [`logger_backends`](https://hex.pm/packages/logger_backends),
-  you can add `Airbrake.LoggerBackend` as a logger backend. Put this in the
-  `start/2` function of a module that implements the `Application` behaviour:
+  ## Setup
+
+  The `Logger` backends API is in the
+  [`logger_backends`](https://hex.pm/packages/logger_backends) package. Add it
+  to your dependencies:
+
+  ```elixir
+  {:logger_backends, "~> 1.0"}
+  ```
+
+  Then add the backend in the `start/2` callback of your application:
 
   ```elixir
   LoggerBackends.add({Airbrake.LoggerBackend, :error})
   ```
 
-  For older versions of Elixir (before 1.15), you can configure it in a
-  `config/*.exs` file:
+  You must add the backend as a `{module, id}` tuple. The id (`:error` here)
+  only names the backend. It does not set a log level.
+
+  For backwards compatibility, Elixir also lets you add the backend in a
+  `config/*.exs` file without `logger_backends`:
 
   ```elixir
   config :logger,
     backends: [{Airbrake.LoggerBackend, :error}, :console]
   ```
+
+  Keep `:console` in the list. If `:backends` does not include `:console`,
+  Elixir turns off its default console logging.
+
+  ## What the backend reports
+
+  The backend handles only `:error` events from the local node. Logger backends
+  receive `:critical`, `:alert`, and `:emergency` events as `:error` events, so
+  the backend handles those too.
+
+  The backend reports an event only if a line of its message starts with `** `.
+  Elixir uses this format for exceptions, for example in `Exception.format/3`
+  and in the crash reports for GenServers and Tasks. The backend does not report
+  other error messages, such as `Logger.error("payment failed")`.
+
+  The backend builds the notice from the text of the message, not from the
+  original exception:
+
+    * **Error type and message.** The backend gets these from the
+      `** (Type) message` line. If there is more than one such line, the
+      backend uses the last one. For example, when a `GenServer.call/3` exits
+      because the `GenServer` raised an exception, the log message has the
+      exception nested under `** (EXIT)`, and the backend reports the nested
+      exception. If the line has no `(Type)`, the type is
+      `"RuntimeError"` and the message is the rest of the line. If the
+      exception message has more than one line, only its first line is the
+      error message, and the backend ignores the other lines.
+
+    * **Backtrace.** The indented stacktrace lines after the exception message
+      are the backtrace, for example
+      `(my_app 0.1.0) lib/my_app/worker.ex:12: MyApp.Worker.run/1` or
+      `lib/my_app/worker.ex:12: MyApp.Worker.run/1`. The backend ignores other
+      stacktrace lines. For example, a GenServer crash report also has the
+      stacktrace of the client that called the GenServer, and the backtrace
+      does not include it. The backtrace of a nested exception is its own
+      stacktrace, not the stacktrace of the caller after it.
+
+    * **Session.** Each line of the form `Key: value` adds the lowercased key
+      and its value to the session. A GenServer crash report adds
+      `"last message"` and `"state"`, and a Task crash report adds
+      `"function"` and `"args"`. The first line that is not `Key: value` is
+      the `"title"`. The `** ` lines around a nested exception, such as
+      `** (stop) exited in: GenServer.call(...)`, are the `"reason"`. The
+      backend puts these in the session, not the context,
+      so that they do not replace the context fields that Airbrake recognizes,
+      such as `environment` and `hostname`.
+
+  The backend does not send the `Logger` metadata of the event. Logger can
+  truncate a long message before the backend gets it (see the `:truncate`
+  option of `Logger`), and then the end of the backtrace is lost.
+
+  > #### Sensitive data {: .warning}
+  >
+  > The backend sends the exception message and the session values as they
+  > appear in the log message. The `:filter_parameters` and `:filter_headers`
+  > options do not apply to them. A GenServer crash report includes the last
+  > message and the full state of the GenServer, which can include secrets or
+  > personal data.
   """
 
   @behaviour :gen_event
@@ -39,57 +108,90 @@ defmodule Airbrake.LoggerBackend do
   end
 
   def handle_event({:error, _, {Logger, msg, _ts, _metadata}}, state) do
-    try do
-      err_info = parse_error_message(msg)
-
-      Airbrake.report(err_info[:exception],
-        stacktrace: err_info[:stacktrace] || [],
-        context: err_info[:context]
-      )
-    rescue
-      # credo:disable-for-next-line
-      exception -> IO.inspect(exception)
+    case parse_error_message(msg) do
+      {:ok, exception, stacktrace, session} -> Airbrake.report(exception, stacktrace: stacktrace, session: session)
+      :error -> :ok
     end
 
     {:ok, state}
+  rescue
+    # Raising would remove this handler. The message of the exception might have sensitive data, so warn with just
+    # its type, and not with Logger, which would call this handler again.
+    exception ->
+      IO.warn("airbrake_client could not report a log message: #{inspect(exception.__struct__)}", [])
+      {:ok, state}
   end
 
   def handle_event(_, state) do
     {:ok, state}
   end
 
+  # The exception is the last "** " line, and its backtrace is the frame lines after the rest of its message.
   defp parse_error_message(msg) do
-    msg
-    |> to_string
-    |> String.split("\n")
-    |> Enum.reverse()
-    |> Enum.reduce(%{stacktrace: [], context: %{}}, &parse_line/2)
+    reversed_lines = msg |> to_string() |> String.split("\n") |> Enum.reverse()
+
+    case Enum.split_while(reversed_lines, &(not exception_line?(&1))) do
+      {_, []} ->
+        :error
+
+      {reversed_after, [exception_line | reversed_before]} ->
+        {frames, rest} = reversed_after |> Enum.reverse() |> split_backtrace()
+        stacktrace = Enum.map(frames, &String.trim_leading/1)
+        {outer_exception_lines, before} = reversed_before |> Enum.reverse() |> Enum.split_with(&exception_line?/1)
+        session = (before ++ rest) |> parse_session() |> put_reason(outer_exception_lines)
+        {:ok, parse_exception(exception_line), stacktrace, session}
+    end
   end
 
-  defp parse_line("    " <> line, res), do: parse_line(line, res)
+  # Without frames, the lines after the exception are session data, not the rest of its message. A nested exception
+  # (like one raised in a GenServer.call/3) indents its frames more than the frames of the caller after them. The
+  # frames after the fields of a GenServer crash report belong to the client, not to the exception.
+  defp split_backtrace(lines) do
+    {message_and_frames, report_fields} = Enum.split_while(lines, &(not report_field_line?(&1)))
 
-  defp parse_line("** " <> err_msg, res) do
+    case Enum.split_while(message_and_frames, &(not frame_line?(&1))) do
+      {_message_lines, [first_frame | _] = frames_and_rest} ->
+        indentation = indentation(first_frame)
+        {frames, rest} = Enum.split_while(frames_and_rest, &(frame_line?(&1) and indentation(&1) == indentation))
+        {frames, rest ++ report_fields}
+
+      {_, []} ->
+        {[], lines}
+    end
+  end
+
+  defp exception_line?(line), do: String.starts_with?(String.trim_leading(line), "** ")
+
+  defp report_field_line?(line), do: Regex.match?(~r/\A(Last message[ :]|State: |Client #PID<)/, line)
+
+  # Matches "(app vsn) file:line: function", "(app vsn) function", and "file:line: function", indented at least once.
+  defp frame_line?(line), do: Regex.match?(~r/\A {4,}(\(|\S+:\d+: )/, line)
+
+  defp indentation(line), do: byte_size(line) - byte_size(String.trim_leading(line))
+
+  defp parse_exception(line) do
+    "** " <> err_msg = String.trim_leading(line)
+
     case Regex.run(~r/\((.*?)\)\s*(.*?)\z/, err_msg) do
-      [_, type, message] ->
-        Map.put_new(res, :exception, type: type, message: message)
-
-      _ ->
-        Map.put_new(res, :exception, type: "RuntimeError", message: err_msg)
+      [_, type, message] -> [type: type, message: message]
+      _ -> [type: "RuntimeError", message: err_msg]
     end
   end
 
-  defp parse_line("(" <> _ = st_line, res) do
-    Map.put(res, :stacktrace, [st_line | Map.get(res, :stacktrace, [])])
+  defp parse_session(lines) do
+    lines
+    |> Enum.reject(&(frame_line?(&1) or String.trim(&1) == ""))
+    |> Enum.reduce(%{}, fn line, session ->
+      case line |> String.trim_leading() |> String.split(": ", parts: 2) do
+        [key, value] -> Map.put_new(session, String.downcase(key), value)
+        [title] -> Map.put_new(session, "title", title)
+      end
+    end)
   end
 
-  defp parse_line(line, res) do
-    case String.split(line, ": ", parts: 2) do
-      [key, value] ->
-        key = key |> String.downcase() |> String.to_atom()
-        put_in(res, [:context, key], value)
+  # The exceptions around a nested exception, like "** (stop) exited in: GenServer.call(...)".
+  defp put_reason(session, []), do: session
 
-      [value] ->
-        put_in(res, [:context, :title], value)
-    end
-  end
+  defp put_reason(session, outer_exception_lines),
+    do: Map.put_new(session, "reason", Enum.map_join(outer_exception_lines, "\n", &String.trim_leading/1))
 end

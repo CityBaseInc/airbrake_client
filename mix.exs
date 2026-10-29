@@ -4,8 +4,8 @@ defmodule Airbrake.Mixfile do
   def project do
     [
       app: :airbrake_client,
-      version: "3.0.0-rc.0",
-      elixir: "~> 1.12",
+      version: "3.0.0-rc.1",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       package: package(),
       aliases: aliases(),
@@ -60,7 +60,7 @@ defmodule Airbrake.Mixfile do
 
   defp deps do
     [
-      {:httpoison, "~> 1.0 or ~> 2.0"},
+      {:httpoison, "~> 2.0 or ~> 3.0"},
       {:jason, ">= 1.0.0", optional: true},
       {:poison, ">= 2.0.0", optional: true},
       # dev and test
@@ -68,7 +68,9 @@ defmodule Airbrake.Mixfile do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.30", only: [:dev, :test]},
       {:excoveralls, "~> 0.18", only: :test},
+      {:logger_backends, "~> 1.0", only: :test},
       {:mox, "~> 1.1", only: :test},
+      {:plug, "~> 1.0", only: :test},
       {:stream_data, "~> 1.2", only: [:dev, :test]}
     ]
   end
@@ -91,6 +93,7 @@ defmodule Airbrake.Mixfile do
         "guides/shared_options.md",
         "guides/context_environment.md",
         "guides/session.md",
+        "guides/testing_integration.md",
         "guides/developing.md",
         "guides/migrating.md"
       ],

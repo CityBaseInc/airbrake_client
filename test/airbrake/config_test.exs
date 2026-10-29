@@ -102,14 +102,14 @@ defmodule Airbrake.ConfigTest do
       assert Config.payload_processor(MockConfig) == Airbrake.PoisonPayloadProcessor
     end
 
-    test "defaults to Poison module when neither is configured" do
+    test "defaults to Json module when neither is configured" do
       MockConfig
       |> stub(:get, fn
         :payload_processor -> nil
         :json_encoder -> nil
       end)
 
-      assert Config.payload_processor(MockConfig) == Airbrake.PoisonPayloadProcessor
+      assert Config.payload_processor(MockConfig) == Airbrake.JsonPayloadProcessor
     end
   end
 

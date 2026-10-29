@@ -1,5 +1,124 @@
 # Changelog
 
+## v3.0.0-rc.1 (2026-10-29)
+
+Breaking changes:
+* The minimum Elixir version is now 1.17. Elixir 1.16 only runs on Erlang/OTP
+  versions that have reached end of life. CI tests Elixir 1.17 through 1.20 on
+  Erlang/OTP 27 through 29.
+* Only Erlang/OTP 27 and later are supported. Erlang/OTP 26 reached end of life
+  on 26 May 2026.
+* `Airbrake.JsonPayloadProcessor` is the default `:payload_processor` instead of
+  `Airbrake.PoisonPayloadProcessor`, so the default needs no JSON library. If
+  you rely on the default and want to keep Poison, set
+  `payload_processor: Airbrake.PoisonPayloadProcessor`. On Erlang/OTP 25 or 26,
+  which do not have `:json`, set `:payload_processor` to
+  `Airbrake.JasonPayloadProcessor` or `Airbrake.PoisonPayloadProcessor`.
+* `httpoison` 1.x is no longer supported. `httpoison` 2.x and 3.x are supported.
+  `httpoison` 3.x uses `hackney` 4.x, which requires Erlang/OTP 26 or later.
+* `use Airbrake.GenServer` is no longer supported, and it raises an error at
+  compile time. Call `Airbrake.GenServer.report_termination/2` from the
+  `terminate/2` callback of your `GenServer` instead. The notice no longer has
+  the inspected state of the `GenServer` in its context, which could include
+  secrets or personal data. Add only what you need to the options you pass to
+  `report_termination/2`.
+* `Airbrake.LoggerBackend` puts the `Key: value` lines and the title of a log
+  message in the session instead of the context. Before, a line such as
+  `Environment: staging` could replace a context field that Airbrake
+  recognizes.
+* `Airbrake.Channel` puts the channel module, the event, and the topic in the
+  `component`, `action`, and `route` fields of the context instead of
+  `channel` and `msg_type`.
+* `Airbrake.Plug` sends the client address as `userAddr` instead of `userIP`,
+  which Airbrake did not recognize. It no longer sends `cookies` in the
+  context. The cookies are still in the `"cookie"` request header, where
+  `:filter_headers` can filter them.
+
+**Channel errors:** An error in the `handle_info/2` callback of a channel no
+longer crashes the worker. The message is in the params as `message`. An
+error in `handle_in/3` for a payload that is not a map, such as
+`{:binary, data}`, no longer crashes the worker either. The payload is in the
+params as `payload`.
+
+**JSON payload processor:** `Airbrake.JsonPayloadProcessor` encodes `nil` as
+`null`. Before, it encoded `nil` as the string `"nil"`, including the
+`params`, `session`, and `environment` of a notice without them. It now uses
+`JSON` from Elixir 1.18+. With Elixir 1.17, it still uses `:json`. Like
+`Airbrake.JasonPayloadProcessor`, it encodes dates and times as ISO 8601
+strings and fails for other structs in the context, the session, or the
+environment. `:json` encoded a struct as a map with a `__struct__` key.
+
+**Anonymous function frames:** A stacktrace with an anonymous function frame
+(`{fun, arity, location}`) is now reported. Before, the notice failed, and
+the worker crashed.
+
+**Worker crashes:** The worker posts every notice, and a crash lost the
+processes from `Airbrake.monitor/1` and logged its state with unfiltered
+params and headers. These no longer crash the worker:
+* A notice that fails to process, such as a notice from `Airbrake.LoggerBackend`
+  with an exception message that is not valid UTF-8. The warning on stderr now
+  has only the type of the original exception, the type of the error, and the
+  stacktrace of the error with arities instead of args. Before, it had their
+  messages, which can have sensitive data.
+* A message that the worker does not expect.
+* `Airbrake.monitor/1` with something other than a pid or an atom, such as a
+  `{:via, module, name}` tuple. It now returns `{:error, ArgumentError}`.
+* A keyword list for `:context`, `:session`, or `:env`, or params that are not
+  a map, when the worker adds the details from `Airbrake.Plug` or
+  `Airbrake.Channel`. A keyword list is now merged like a map.
+
+Crash reports and `:sys.get_status/1` for the worker no longer show the
+remembered details, the options of a notice, or exception messages. This
+includes the events logged after `:sys.log/2`, except in the raw debug options
+that `:sys.get_status/1` returns.
+
+**Plug and Channel details:** `Airbrake.Plug` and `Airbrake.Channel` add their
+details to the notice from `Airbrake.LoggerBackend` for an exception with a
+message of more than one line, such as a `KeyError`. Before, the backend
+reported only the first line of the message, which did not match the
+remembered exception, and the details were lost. The docs now say that both
+modules need `Airbrake.LoggerBackend`.
+
+**GenServer termination:** `Airbrake.GenServer.report_termination/2` replaces
+`Airbrake.GenServer.handle_terminate/2`, which is deprecated.
+* `report_termination/2` takes the options of `Airbrake.report/2`, so you can
+  set the context and the session. `handle_terminate/2` still takes a context
+  map.
+* A raised exception is now reported with its own type, message, and
+  stacktrace. Before, it was reported as a `RuntimeError` with the inspected
+  `{exception, stacktrace}` tuple as its message.
+* An Erlang error is now reported as the matching Elixir exception with its
+  stacktrace. For example, `{:badmatch, 1}` is reported as a `MatchError`
+  instead of a `RuntimeError`.
+* `Airbrake.monitor/1` also gets these fixes.
+* `Airbrake.monitor/1` no longer puts `process_name` in the context. If you
+  monitor a registered name, the name is the `component` of the context, which
+  Airbrake recognizes. The session has the inspected process as `process`.
+
+**Logger backend:** `Airbrake.LoggerBackend` builds better notices from log
+messages.
+* The backtrace is the stacktrace lines after the exception message, even if
+  the message has more than one line. Lines without an `(app vsn)` prefix, such as
+  `lib/my_app/worker.ex:12: MyApp.Worker.run/1`, are now in the backtrace
+  instead of the context. Other stacktrace lines, such as the client's
+  stacktrace in a GenServer crash report, are no longer in the backtrace or the
+  context.
+* For a nested exception, such as an exception raised in a `GenServer` during
+  a `GenServer.call/3`, the backtrace is the stacktrace of the nested
+  exception instead of the stacktrace of the caller. The `** ` lines around
+  it, such as `** (stop) exited in: GenServer.call(...)`, are in the session
+  as `reason`.
+* The backend is no longer removed from `Logger` when it fails to handle a
+  log message. It prints a warning with the type of the error to stderr.
+* The backend no longer creates atoms from the text of log messages.
+* The backend no longer prints exceptions with `IO.inspect/1`.
+* The docs explain how to set up the backend with `logger_backends` and describe
+  what the backend reports, with a warning about sensitive data.
+
+**Testing an integration:** A new guide, "Testing an Integration", has examples
+that post real notices so that you can check that your app sends them to
+Airbrake.
+
 ## v3.0.0-rc.0 (2026-04-17)
 
 The v3.0.0 release makes configuration and JSON encoding much better and less

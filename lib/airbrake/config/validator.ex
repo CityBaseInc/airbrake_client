@@ -81,8 +81,12 @@ defmodule Airbrake.Config.Validator do
 
   defp validate_type(:api_key, value) when is_binary(value), do: :ok
   defp validate_type(:api_key, {:system, var}) when is_binary(var), do: :ok
-  defp validate_type(:api_key, {:system, var, default}) when is_binary(var) and is_binary(default), do: :ok
-  defp validate_type(:api_key, value), do: {:error, ":api_key must be a string, got #{inspect(value)}"}
+
+  defp validate_type(:api_key, {:system, var, default})
+       when is_binary(var) and is_binary(default), do: :ok
+
+  defp validate_type(:api_key, value),
+    do: {:error, ":api_key must be a string, got #{inspect(value)}"}
 
   defp validate_type(:project_id, value) when is_integer(value), do: :ok
 
@@ -94,18 +98,25 @@ defmodule Airbrake.Config.Validator do
   end
 
   defp validate_type(:project_id, {:system, var}) when is_binary(var), do: :ok
-  defp validate_type(:project_id, {:system, var, default}) when is_binary(var) and is_integer(default), do: :ok
+
+  defp validate_type(:project_id, {:system, var, default})
+       when is_binary(var) and is_integer(default), do: :ok
 
   defp validate_type(:project_id, value),
     do: {:error, ":project_id must be an integer or integer string, got #{inspect(value)}"}
 
   defp validate_type(:host, value) when is_binary(value), do: :ok
   defp validate_type(:host, {:system, var}) when is_binary(var), do: :ok
-  defp validate_type(:host, {:system, var, default}) when is_binary(var) and is_binary(default), do: :ok
+
+  defp validate_type(:host, {:system, var, default}) when is_binary(var) and is_binary(default),
+    do: :ok
+
   defp validate_type(:host, value), do: {:error, ":host must be a string, got #{inspect(value)}"}
 
   defp validate_type(:json_encoder, value) when is_atom(value), do: :ok
-  defp validate_type(:json_encoder, value), do: {:error, ":json_encoder must be a module, got #{inspect(value)}"}
+
+  defp validate_type(:json_encoder, value),
+    do: {:error, ":json_encoder must be a module, got #{inspect(value)}"}
 
   defp validate_type(:filter_parameters, value) when is_list(value) do
     if Enum.all?(value, &is_binary/1),
@@ -205,6 +216,7 @@ defmodule Airbrake.Config.Validator do
 
       missing ->
         formatted = Enum.map_join(missing, ", ", fn {f, a} -> "#{f}/#{a}" end)
+
         {:error, ":payload_processor module #{inspect(module)} is missing callbacks: #{formatted}"}
     end
   end
@@ -228,20 +240,33 @@ defmodule Airbrake.Config.Validator do
     cond do
       has_payload_processor and has_json_encoder ->
         processor = Keyword.fetch!(config, :payload_processor)
+
         IO.warn("airbrake_client: :json_encoder is ignored because :payload_processor is set to #{inspect(processor)}")
+
         errors
 
       has_payload_processor ->
         errors
 
-      true ->
-        encoder = Keyword.get(config, :json_encoder, Poison)
+      has_json_encoder ->
+        encoder = Keyword.fetch!(config, :json_encoder)
 
         if is_atom(encoder) and not Code.ensure_loaded?(encoder) do
           ["JSON encoder #{inspect(encoder)} is not available" | errors]
         else
           errors
         end
+
+      # Airbrake.JsonPayloadProcessor is the default, and it needs :json from Erlang/OTP 27+.
+      Code.ensure_loaded?(Airbrake.JsonPayloadProcessor) ->
+        errors
+
+      true ->
+        [
+          "the default :payload_processor Airbrake.JsonPayloadProcessor needs Erlang/OTP 27 or later; " <>
+            "set :payload_processor to Airbrake.JasonPayloadProcessor or Airbrake.PoisonPayloadProcessor"
+          | errors
+        ]
     end
   end
 end

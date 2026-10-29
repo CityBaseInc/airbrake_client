@@ -6,6 +6,8 @@ Breaking changes:
 * The deprecated `:json_encoder` and `:environment` config options are removed.
   Use `:payload_processor` and `:context_environment` instead. The app no
   longer starts if either is set, with the error `unknown config key`.
+* The deprecated `Airbrake.destruct/1` and `Airbrake.detuple/1` are removed.
+  Use `Airbrake.Utils.destruct/1` and `Airbrake.Utils.detuple/1` instead.
 
 ## v3.0.0-rc.1 (2026-10-29)
 

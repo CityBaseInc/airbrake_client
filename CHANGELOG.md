@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+Breaking changes:
+* The deprecated `:json_encoder` and `:environment` config options are removed.
+  Use `:payload_processor` and `:context_environment` instead. The app no
+  longer starts if either is set, with the error `unknown config key`.
+
 ## v3.0.0-rc.1 (2026-10-29)
 
 Breaking changes:

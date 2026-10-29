@@ -13,6 +13,10 @@ Breaking changes:
 * The deprecated `Airbrake.GenServer.handle_terminate/2` is removed. Use
   `Airbrake.GenServer.report_termination/2` instead, with the context as the
   `:context` option.
+* `use Airbrake.GenServer` no longer raises an error that explains how to
+  replace it. It fails to compile because `Airbrake.GenServer.__using__/1` is
+  undefined. Call `Airbrake.GenServer.report_termination/2` from the
+  `terminate/2` callback of your `GenServer` instead.
 
 ## v3.0.0-rc.1 (2026-10-29)
 

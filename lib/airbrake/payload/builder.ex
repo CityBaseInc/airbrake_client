@@ -46,7 +46,7 @@ defmodule Airbrake.Payload.Builder do
         do: Keyword.get(opts, :logger_metadata, []),
         else: []
 
-    opts_session = opts |> Keyword.get(:session, %{}) |> Enum.into(%{})
+    opts_session = Enum.into(Keyword.get(opts, :session) || %{}, %{})
     full_session = logger_metadata |> Enum.into(%{}) |> Map.merge(opts_session)
 
     # The session can have structs and tuples (such as the assigns of a socket) and sensitive data (such as Logger

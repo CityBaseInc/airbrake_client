@@ -247,6 +247,18 @@ defmodule Airbrake.Payload.BuilderTest do
       end
     end
 
+    test "returns logger metadata if :session is nil" do
+      session_includes_metadata()
+
+      opts = [
+        config: MockConfig,
+        logger_metadata: [request_id: "abc123"],
+        session: nil
+      ]
+
+      assert Builder.build(:session, opts) == %{"request_id" => "abc123"}
+    end
+
     test "filters logger metadata and :session" do
       session_includes_metadata(["email", "token"])
 
@@ -298,6 +310,12 @@ defmodule Airbrake.Payload.BuilderTest do
 
         assert Builder.build(:session, opts) == session
       end
+    end
+
+    test "nil if :session is nil" do
+      session_does_not_includes_metadata()
+
+      assert Builder.build(:session, config: MockConfig, session: nil) == nil
     end
 
     test "destructures structs, filters, and converts tuples to lists" do

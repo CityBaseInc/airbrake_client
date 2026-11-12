@@ -28,6 +28,10 @@ defmodule Airbrake.Channel do
   the topic as its `route`. The params are the payload of the message, and the
   session is the assigns of the socket. A payload that is not a map, such as
   `{:binary, data}`, is in the params as `payload`.
+
+  The assigns are processed like the params, so `:filter_parameters` filters
+  them, and structs and tuples in them are encoded. Add the keys of any
+  sensitive assigns to `:filter_parameters`.
   """
 
   defmacro __using__(_env) do

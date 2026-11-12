@@ -33,6 +33,14 @@ Breaking changes:
   which Airbrake did not recognize. It no longer sends `cookies` in the
   context. The cookies are still in the `"cookie"` request header, where
   `:filter_headers` can filter them.
+* The session is processed like the params, with
+  `c:Airbrake.PayloadProcessor.process_params/2` and `:filter_parameters`. This
+  includes the `Logger` metadata from `session: :include_logger_metadata` and
+  the assigns of a socket from `Airbrake.Channel`. Before, the session was not
+  filtered, and a struct or a tuple in it made the notice fail, so only a
+  fallback notice was sent. The keys of maps in the session are now strings,
+  and a date or a time is a map of its fields instead of an ISO 8601 string. A
+  custom `:payload_processor` gets the session in `process_params/2`.
 
 **Channel errors:** An error in the `handle_info/2` callback of a channel no
 longer crashes the worker. The message is in the params as `message`. An
@@ -45,8 +53,8 @@ params as `payload`.
 `params`, `session`, and `environment` of a notice without them. It now uses
 `JSON` from Elixir 1.18+. With Elixir 1.17, it still uses `:json`. Like
 `Airbrake.JasonPayloadProcessor`, it encodes dates and times as ISO 8601
-strings and fails for other structs in the context, the session, or the
-environment. `:json` encoded a struct as a map with a `__struct__` key.
+strings and fails for other structs in the context or the environment.
+`:json` encoded a struct as a map with a `__struct__` key.
 
 **Anonymous function frames:** A stacktrace with an anonymous function frame
 (`{fun, arity, location}`) is now reported. Before, the notice failed, and

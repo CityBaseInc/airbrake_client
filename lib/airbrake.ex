@@ -51,9 +51,9 @@ defmodule Airbrake do
 
   Be very careful of the values that you add to a notice. `jason` and `poison`
   do not encode everything out of the box, so keep yourself to maps, lists, and
-  simple scalars for all values except for `:params`.
+  simple scalars for all values except for `:params` and `:session`.
 
-  The value of `:params` is processed by
+  The values of `:params` and `:session` are processed by
   `c:Airbrake.PayloadProcessor.process_params/2` which should do it's best to
   make an Elixir term into something encodable. The default implementations turn
   tuples, structs and keyword lists into encodable terms (e.g., a struct into a

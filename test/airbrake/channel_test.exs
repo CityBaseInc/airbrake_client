@@ -5,8 +5,13 @@ defmodule Airbrake.ChannelTest do
   import Airbrake.Test
   import Mox
 
-  alias Airbrake.ChannelTest.RoomChannel
+  alias Airbrake.ChannelTest.{RoomChannel, User}
   alias Airbrake.MockHTTPoison
+
+  defmodule User do
+    @moduledoc false
+    defstruct [:id, :password]
+  end
 
   setup :set_mox_from_context
   setup :verify_on_exit!
@@ -32,6 +37,27 @@ defmodule Airbrake.ChannelTest do
       refute Map.has_key?(context, "channel")
       assert session == %{"user_id" => 42}
       assert params == %{"token" => "t"}
+    end
+
+    test "reports assigns with a struct, a tuple, and a filtered key" do
+      expect(MockHTTPoison, :post, airbrake_post_mock_fun())
+
+      socket = %{
+        @socket
+        | assigns: %{current_user: %User{id: 42, password: "secret"}, position: {1, 2}, password: "secret"}
+      }
+
+      exception = catch_error(RoomChannel.join("room:lobby", %{}, socket))
+      Airbrake.report(exception)
+
+      %{"errors" => [error], "session" => session} = receive_payload()
+      assert error["type"] == "RuntimeError"
+
+      assert session == %{
+               "current_user" => %{"id" => 42, "password" => "[FILTERED]"},
+               "position" => [1, 2],
+               "password" => "[FILTERED]"
+             }
     end
   end
 

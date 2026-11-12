@@ -89,8 +89,8 @@ end
   ["Shared Options"](shared_options.html).
 * `:session` - set to `:include_logger_metadata` to put `Logger` metadata in
   `notice.session`. See ["The Session"](session.html).
-* `:filter_parameters` - (list of strings) keys of sensitive params to filter.
-  See `Airbrake.Utils.filter/2`.
+* `:filter_parameters` - (list of strings) keys of sensitive params and session
+  values to filter. See `Airbrake.Utils.filter/2`.
 * `:filter_headers` - (list of strings) HTTP headers to filter.
 * `:payload_processor` - (module, defaults to `Airbrake.JsonPayloadProcessor`)
   processes and encodes the payload. See ["Payload

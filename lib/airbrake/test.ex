@@ -39,16 +39,16 @@ defmodule Airbrake.Test do
 
   ## Synchronous Tests
 
-  Because `airbrake_client` runs just one process (named `Airbrake.Worker`), you
+  Because `airbrake_client` posts every notice from just one worker process, you
   most likely have to run tests involving `airbrake_client` _synchronously_
   (`async: false`) so that the expectations made in the test process can be used
-  in the `Airbrake.Worker` process.
+  in the worker process.
 
   In Mox, this means running in global mode. Be sure to use the
   `Mox.set_mox_from_context/1` setup function to turn on global mode for a test
-  module. You cannot use `Mox.allow/3` to share the expectations with the
-  `Airbrake.Worker` process unless you have just _one_ test process for all
-  tests involving `airbrake_client`.
+  module. You cannot use `Mox.allow/3` to share the expectations with the worker
+  process unless you have just _one_ test process for all tests involving
+  `airbrake_client`.
 
   ## Example
 

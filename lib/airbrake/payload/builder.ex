@@ -18,7 +18,7 @@ defmodule Airbrake.Payload.Builder do
 
     Map.merge(
       %{environment: config.context_environment(), hostname: config.hostname()},
-      opts |> Keyword.get(:context, %{}) |> Enum.into(%{})
+      Enum.into(Keyword.get(opts, :context) || %{}, %{})
     )
   end
 
@@ -35,13 +35,7 @@ defmodule Airbrake.Payload.Builder do
   end
 
   def build(:params, opts) do
-    config = get_config(opts)
-    processor = config.payload_processor()
-    filter_parameters = config.get(:filter_parameters, [])
-
-    opts
-    |> Keyword.get(:params)
-    |> processor.process_params(filtered_attributes: filter_parameters)
+    opts |> Keyword.get(:params) |> process_params(get_config(opts))
   end
 
   def build(:session, opts) do
@@ -52,12 +46,14 @@ defmodule Airbrake.Payload.Builder do
         do: Keyword.get(opts, :logger_metadata, []),
         else: []
 
-    opts_session = opts |> Keyword.get(:session, %{}) |> Enum.into(%{})
+    opts_session = Enum.into(Keyword.get(opts, :session) || %{}, %{})
     full_session = logger_metadata |> Enum.into(%{}) |> Map.merge(opts_session)
 
+    # The session can have structs and tuples (such as the assigns of a socket) and sensitive data (such as Logger
+    # metadata), so it is processed like the params.
     if full_session == %{},
       do: nil,
-      else: full_session
+      else: process_params(full_session, config)
   end
 
   @spec filter_environment(nil) :: nil
@@ -89,6 +85,10 @@ defmodule Airbrake.Payload.Builder do
       key,
       &processor.process_headers(&1, filtered_attributes: filtered_attributes)
     )
+  end
+
+  defp process_params(params, config) do
+    config.payload_processor().process_params(params, filtered_attributes: config.get(:filter_parameters, []))
   end
 
   defp get_config(opts),

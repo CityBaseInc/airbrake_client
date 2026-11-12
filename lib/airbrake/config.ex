@@ -61,7 +61,7 @@ defmodule Airbrake.Config do
 
   When not set, falls back to `:json_encoder`, mapping it to the corresponding
   module. If neither `:payload_processor` nor `:json_encoder` are set, defaults
-  to `Airbrake.PoisonPayloadProcessor`.
+  to `Airbrake.JsonPayloadProcessor`.
   """
   @impl Airbrake.Config.Behaviour
   @spec payload_processor(module()) :: module()
@@ -89,8 +89,8 @@ defmodule Airbrake.Config do
   defp payload_processor_from_json_encoder(config) do
     case config.get(:json_encoder) do
       Jason -> Airbrake.JasonPayloadProcessor
-      :json -> Airbrake.JsonPayloadProcessor
-      _ -> Airbrake.PoisonPayloadProcessor
+      Poison -> Airbrake.PoisonPayloadProcessor
+      _ -> Airbrake.JsonPayloadProcessor
     end
   end
 

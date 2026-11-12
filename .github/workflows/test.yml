@@ -12,26 +12,20 @@ jobs:
     strategy:
       matrix:
         include:
-          - elixir: '1.15'
-            otp: '24'
-          - elixir: '1.15'
-            otp: '25'
-          - elixir: '1.15'
-            otp: '26'
-          - elixir: '1.16'
-            otp: '24'
-          - elixir: '1.16'
-            otp: '25'
-          - elixir: '1.16'
-            otp: '26'
           - elixir: '1.17'
             otp: '27'
           - elixir: '1.18'
             otp: '27'
           - elixir: '1.19'
+            otp: '27'
+          - elixir: '1.19'
             otp: '28'
+          - elixir: '1.20'
+            otp: '28'
+          - elixir: '1.20'
+            otp: '29'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
@@ -53,11 +47,11 @@ jobs:
       run:
         working-directory: integration_test_apps/poison_only_app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '28.1'
-          elixir-version: '1.19.1'
+          otp-version: '29'
+          elixir-version: '1.20'
       - run: mix deps.get
       - run: mix test
 
@@ -68,11 +62,11 @@ jobs:
       run:
         working-directory: integration_test_apps/jason_only_app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '28.1'
-          elixir-version: '1.19.1'
+          otp-version: '29'
+          elixir-version: '1.20'
       - run: mix deps.get
       - run: mix test
 
@@ -83,11 +77,11 @@ jobs:
       run:
         working-directory: integration_test_apps/json_only_app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '28.1'
-          elixir-version: '1.19.1'
+          otp-version: '29'
+          elixir-version: '1.20'
       - run: mix deps.get
       - run: mix test
 
@@ -98,11 +92,11 @@ jobs:
       run:
         working-directory: integration_test_apps/default_processor_app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: erlef/setup-beam@v1
         with:
-          otp-version: '28.1'
-          elixir-version: '1.19.1'
+          otp-version: '29'
+          elixir-version: '1.20'
       - run: mix deps.get
       - run: mix test
 
@@ -113,21 +107,35 @@ jobs:
     strategy:
       matrix:
         include:
-          - elixir: '1.19.1'
-            otp: '28.1'
+          - elixir: '1.20'
+            otp: '29'
+          - elixir: '1.20'
+            otp: '29'
+            httpoison: '~> 2.0'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup elixir
         uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.otp}}
           elixir-version: ${{matrix.elixir}}
 
+      - name: Restrict HTTPoison Version
+        if: matrix.httpoison
+        run: |
+          sed -i 's/{:httpoison, "[^"]*"}/{:httpoison, "${{matrix.httpoison}}"}/' mix.exs
+          grep -F '{:httpoison, "${{matrix.httpoison}}"}' mix.exs
+
       - name: Get Deps
         run: mix deps.get
 
+      - name: Verify HTTPoison Version
+        if: matrix.httpoison
+        run: |
+          grep -E '"httpoison": \{:hex, :httpoison, "2\.' mix.lock
+
       - name: Cache Elixir build
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: _build
           key: elixir-build-v2-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('mix.lock') }}-${{ hashFiles('lib/**/*.ex', 'config/*.exs', 'mix.exs') }}

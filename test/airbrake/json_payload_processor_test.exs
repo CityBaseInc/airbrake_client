@@ -1,6 +1,7 @@
 if Code.ensure_loaded?(:json) do
   defmodule Airbrake.JsonPayloadProcessorTest do
     use ExUnit.Case, async: true
+    use ExUnitProperties
 
     alias Airbrake.JsonPayloadProcessor
     alias Airbrake.TestSupport.{Boss, Employee, Team}
@@ -49,6 +50,32 @@ if Code.ensure_loaded?(:json) do
       test "encodes a map to JSON" do
         assert JsonPayloadProcessor.encode!(%{"key" => "value"}) == ~s/{"key":"value"}/
       end
+
+      test "encodes nil as null" do
+        assert JsonPayloadProcessor.encode!(%{"key" => nil}) == ~s/{"key":null}/
+      end
+
+      property "encodes a term that decodes to the same term" do
+        check all term <- json_term() do
+          assert term |> JsonPayloadProcessor.encode!() |> Jason.decode!() == term
+        end
+      end
+    end
+
+    describe "erlang_json_encode!/1" do
+      property "encodes a term that decodes to the same term" do
+        check all term <- json_term() do
+          assert term |> JsonPayloadProcessor.erlang_json_encode!() |> Jason.decode!() == term
+        end
+      end
+    end
+
+    defp json_term do
+      scalar = one_of([constant(nil), boolean(), integer(), string(:printable)])
+
+      tree(scalar, fn child ->
+        one_of([list_of(child), map_of(string(:printable), child)])
+      end)
     end
   end
 end

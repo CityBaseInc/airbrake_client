@@ -1,5 +1,6 @@
 defmodule Airbrake.WorkerTest do
   use ExUnit.Case, async: false
+  use ExUnitProperties
 
   import Airbrake.Test
   import Mox
@@ -11,7 +12,7 @@ defmodule Airbrake.WorkerTest do
   setup :verify_on_exit!
 
   setup do
-    worker_pid = start_worker()
+    worker_pid = start_supervised!(Airbrake.Worker)
 
     {exception, stacktrace} =
       try do
@@ -19,8 +20,6 @@ defmodule Airbrake.WorkerTest do
       rescue
         exception -> {exception, __STACKTRACE__}
       end
-
-    on_exit(&maybe_stop_worker/0)
 
     [exception: exception, stacktrace: stacktrace, worker_pid: worker_pid]
   end
@@ -101,6 +100,146 @@ defmodule Airbrake.WorkerTest do
     end
   end
 
+  describe "report/2 after remember/2" do
+    property "adds the remembered details when the message is the first line of the remembered message" do
+      stub(Airbrake.MockHTTPoison, :post, airbrake_post_mock_fun())
+
+      check all type <- string(:alphanumeric, min_length: 1),
+                first_line <- string(:alphanumeric, min_length: 1),
+                other_lines <- list_of(string(:alphanumeric)) do
+        message = Enum.join([first_line | other_lines], "\n")
+        Airbrake.Worker.remember([type: type, message: message], context: %{component: "Remembered"})
+
+        Airbrake.Worker.report([type: type, message: first_line], [])
+
+        assert_receive {:airbrake_report, %{payload: payload}}, 500
+        assert Poison.decode!(payload)["context"]["component"] == "Remembered"
+      end
+    end
+
+    property "does not add the remembered details for another exception" do
+      stub(Airbrake.MockHTTPoison, :post, airbrake_post_mock_fun())
+
+      check all type <- string(:alphanumeric, min_length: 1),
+                message <- string(:alphanumeric, min_length: 1),
+                other_message <- string(:alphanumeric, min_length: 1),
+                other_message != message do
+        Airbrake.Worker.remember([type: type, message: message], context: %{component: "Remembered"})
+
+        Airbrake.Worker.report([type: type, message: other_message], [])
+
+        assert_receive {:airbrake_report, %{payload: payload}}, 500
+        refute Map.has_key?(Poison.decode!(payload)["context"], "component")
+      end
+    end
+
+    property "merges a keyword list with the remembered details" do
+      stub(Airbrake.MockHTTPoison, :post, airbrake_post_mock_fun())
+      exception = [type: "RuntimeError", message: "boom"]
+
+      check all key <- member_of([:context, :session]),
+                value <- string(:alphanumeric) do
+        Airbrake.Worker.remember(exception, [{key, %{remembered: "detail"}}])
+
+        Airbrake.Worker.report(exception, [{key, [reported: value]}])
+
+        assert_receive {:airbrake_report, %{payload: payload}}, 500
+        assert %{"remembered" => "detail", "reported" => ^value} = Poison.decode!(payload)[to_string(key)]
+      end
+    end
+
+    property "posts a notice for params of any kind", %{worker_pid: worker_pid} do
+      stub(Airbrake.MockHTTPoison, :post, airbrake_post_mock_fun())
+      exception = [type: "RuntimeError", message: "boom"]
+
+      check all reported <-
+                  one_of([
+                    constant(nil),
+                    string(:alphanumeric),
+                    list_of(integer()),
+                    map_of(atom(:alphanumeric), integer())
+                  ]),
+                remembered <-
+                  one_of([
+                    constant(nil),
+                    string(:alphanumeric),
+                    list_of(integer()),
+                    map_of(atom(:alphanumeric), integer())
+                  ]) do
+        Airbrake.Worker.remember(exception, params: remembered)
+
+        Airbrake.Worker.report(exception, params: reported)
+
+        assert_receive {:airbrake_report, _}, 500
+        assert %State{} = :sys.get_state(worker_pid)
+      end
+    end
+  end
+
+  describe "monitor/1" do
+    property "returns an error for anything other than a pid or an atom", %{worker_pid: worker_pid} do
+      check all target <- term(),
+                not is_pid(target) and not is_atom(target) do
+        assert Airbrake.Worker.monitor(target) == {:error, ArgumentError}
+        assert %State{} = :sys.get_state(worker_pid)
+      end
+    end
+  end
+
+  describe "format_status/1" do
+    property "redacts the remembered exception from the state", %{worker_pid: worker_pid} do
+      check all secret <- map(string(:alphanumeric, min_length: 1), &"secret-#{&1}") do
+        Airbrake.Worker.remember([type: "RuntimeError", message: secret], params: %{"password" => secret})
+
+        status = inspect(:sys.get_status(worker_pid), limit: :infinity)
+
+        assert status =~ "RuntimeError"
+        refute status =~ secret
+      end
+    end
+
+    property "redacts the last message" do
+      check all secret <- map(string(:alphanumeric, min_length: 1), &"secret-#{&1}"),
+                message <-
+                  member_of([
+                    {:"$gen_cast", {:report, [type: "RuntimeError", message: secret], [], params: secret}},
+                    {:"$gen_cast", {:remember, [type: "RuntimeError", message: secret], params: secret}},
+                    {:"$gen_cast", {:monitor, secret}},
+                    {:DOWN, make_ref(), :process, self(), {RuntimeError.exception(secret), []}},
+                    {:unexpected, secret}
+                  ]) do
+        status = Airbrake.Worker.format_status(%{state: %State{}, message: message})
+
+        refute inspect(status, limit: :infinity) =~ secret
+      end
+    end
+
+    property "redacts the messages and states in the sys log", %{worker_pid: worker_pid} do
+      :ok = :sys.log(worker_pid, true)
+
+      check all secret <- map(string(:alphanumeric, min_length: 1), &"secret-#{&1}") do
+        Airbrake.Worker.remember([type: "RuntimeError", message: secret], params: %{"password" => secret})
+
+        # The raw debug options come from :sys, not from format_status/1.
+        {:status, _pid, _module, [_pdict, _sys_state, _parent, _debug, status]} = :sys.get_status(worker_pid)
+
+        assert inspect(status, limit: :infinity) =~ "Logged events"
+        refute inspect(status, limit: :infinity) =~ secret
+      end
+    end
+  end
+
+  describe "an unexpected message" do
+    property "does not crash the worker", %{worker_pid: worker_pid} do
+      check all message <- term(),
+                not match?({:DOWN, _, _, _, _}, message) do
+        send(worker_pid, message)
+
+        assert %State{} = :sys.get_state(worker_pid)
+      end
+    end
+  end
+
   @spec atomize_keys(any()) :: map()
   defp atomize_keys(map) when is_map(map) do
     map
@@ -113,28 +252,4 @@ defmodule Airbrake.WorkerTest do
   end
 
   defp atomize_keys(other), do: other
-
-  defp start_worker do
-    start_result = Airbrake.Worker.start_link()
-
-    case start_result do
-      {:ok, worker_pid} -> worker_pid
-      {:error, {:already_started, worker_pid}} -> worker_pid
-    end
-  end
-
-  defp maybe_stop_worker do
-    pid_to_stop = GenServer.whereis(Airbrake.Worker)
-
-    case pid_to_stop do
-      nil -> :ok
-      _ -> stop_worker(pid_to_stop)
-    end
-  end
-
-  defp stop_worker(pid_to_stop) do
-    GenServer.stop(pid_to_stop, :normal, 1_000)
-  catch
-    :exit, _ -> :ok
-  end
 end

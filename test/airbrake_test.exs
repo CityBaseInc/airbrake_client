@@ -11,7 +11,7 @@ defmodule AirbrakeTest do
       {:ok, %{status_code: 201}}
     end)
 
-    Airbrake.start()
+    start_supervised!(Airbrake.Worker)
     :ok
   end
 

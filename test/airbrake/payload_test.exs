@@ -165,7 +165,15 @@ defmodule Airbrake.PayloadTest do
 
     test "sets session when given" do
       session = %{foo: 555, bar: "qux"}
-      assert %Payload{session: ^session} = Payload.new(@exception, @stacktrace, session: session)
+      assert %Payload{session: %{"foo" => 555, "bar" => "qux"}} = Payload.new(@exception, @stacktrace, session: session)
+    end
+
+    test "filters sensitive session values" do
+      # "password" is filtered out in `config/test.exs`
+      session = %{"password" => "top_secret", "x" => "y"}
+
+      assert %Payload{session: %{"password" => "[FILTERED]", "x" => "y"}} =
+               Payload.new(@exception, @stacktrace, session: session)
     end
   end
 

@@ -19,8 +19,7 @@ defmodule DefaultProcessorApp.MixProject do
 
   defp deps do
     [
-      {:airbrake_client, ">= 0.0.0", path: "../.."},
-      {:poison, ">= 2.0.0"}
+      {:airbrake_client, ">= 0.0.0", path: "../.."}
     ]
   end
 end

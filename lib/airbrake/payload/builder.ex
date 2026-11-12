@@ -18,7 +18,7 @@ defmodule Airbrake.Payload.Builder do
 
     Map.merge(
       %{environment: config.context_environment(), hostname: config.hostname()},
-      opts |> Keyword.get(:context, %{}) |> Enum.into(%{})
+      Enum.into(Keyword.get(opts, :context) || %{}, %{})
     )
   end
 

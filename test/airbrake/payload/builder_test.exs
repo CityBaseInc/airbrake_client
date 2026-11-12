@@ -30,6 +30,14 @@ defmodule Airbrake.Payload.BuilderTest do
       end
     end
 
+    test "builds default/initial context if :context is nil" do
+      MockConfig
+      |> stub(:context_environment, fn -> "prod" end)
+      |> stub(:hostname, fn -> "web-1" end)
+
+      assert Builder.build(:context, config: MockConfig, context: nil) == %{environment: "prod", hostname: "web-1"}
+    end
+
     property "can add more context" do
       check all context_environment <- context_environment(),
                 hostname <- hostname(),

@@ -60,9 +60,9 @@ strings and fails for other structs in the context or the environment.
 (`{fun, arity, location}`) is now reported. Before, the notice failed, and
 the worker crashed.
 
-**Nil session:** `session: nil` in the options of `Airbrake.report/2` is the
-same as no session. Before, the notice failed, and only a fallback notice was
-sent.
+**Nil session and context:** `session: nil` or `context: nil` in the options
+of `Airbrake.report/2` is the same as no session or no context. Before, the
+notice failed, and only a fallback notice was sent.
 
 **Worker crashes:** The worker posts every notice, and a crash lost the
 processes from `Airbrake.monitor/1` and logged its state with unfiltered

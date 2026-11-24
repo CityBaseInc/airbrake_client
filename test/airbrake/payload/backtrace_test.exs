@@ -71,6 +71,35 @@ defmodule Airbrake.Payload.BacktraceTests do
       end
     end
 
+    property "formats an anonymous function entry with file and line options" do
+      fun = fn -> :ok end
+
+      check all arity_or_args <- one_of([positive_integer(), list_of(integer())]),
+                file <- string(:ascii),
+                line <- positive_integer() do
+        entry = {fun, arity_or_args, [file: String.to_charlist(file), line: line]}
+
+        formatted_args =
+          if is_integer(arity_or_args), do: "/#{arity_or_args}", else: "(#{Enum.join(arity_or_args, ", ")})"
+
+        assert Backtrace.from_stacktrace_entry(entry) == %{
+                 file: file,
+                 function: "#{inspect(fun)}#{formatted_args}",
+                 line: line
+               }
+      end
+    end
+
+    test "formats an anonymous function entry without a file or line" do
+      fun = fn -> :ok end
+
+      assert Backtrace.from_stacktrace_entry({fun, 0, []}) == %{
+               file: "unknown",
+               function: "#{inspect(fun)}/0",
+               line: 0
+             }
+    end
+
     property "formats a string entry with app, file, and function information" do
       check all app <- string(:alphanumeric, min_length: 1),
                 file <- string(:alphanumeric, min_length: 1),
@@ -86,9 +115,23 @@ defmodule Airbrake.Payload.BacktraceTests do
       end
     end
 
+    property "formats a string entry with file and function information but no app" do
+      check all file <- string(:alphanumeric, min_length: 1),
+                line <- integer(1..1000),
+                function <- string(:alphanumeric, min_length: 1) do
+        entry = "#{file}:#{line}: #{function}"
+
+        assert Backtrace.from_stacktrace_entry(entry) == %{
+                 file: file,
+                 line: line,
+                 function: function
+               }
+      end
+    end
+
     property "format a string entry that can't be parsed" do
-      # the chance of generating a correct entry must be astronomical
-      check all entry <- string(:ascii) do
+      # without a colon, there is no "file:line:" to parse
+      check all entry <- filter(string(:ascii), &(not String.contains?(&1, ":"))) do
         assert Backtrace.from_stacktrace_entry(entry) == %{
                  file: "unknown",
                  line: 0,

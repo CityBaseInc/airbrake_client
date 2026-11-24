@@ -13,7 +13,7 @@ defmodule JsonOnlyAppTest do
     refute Code.ensure_compiled(Poison) == {:module, Poison}
   end
 
-  describe ":json encoding" do
+  describe "Airbrake.JsonPayloadProcessor encoding" do
     test "with minimal options" do
       exception = [
         type: "SomeAwfulError",
@@ -27,11 +27,11 @@ defmodule JsonOnlyAppTest do
 
       assert %Payload{} = payload = Payload.new(exception, stacktrace)
 
-      # `:json` encodes nil atoms as the string "nil" (not JSON null).
+      # `:json.decode/1` decodes null as :null.
       assert %{
-               "apiKey" => "nil",
+               "apiKey" => :null,
                "context" => %{"environment" => _, "hostname" => _},
-               "environment" => "nil",
+               "environment" => :null,
                "errors" => [
                  %{
                    "backtrace" => [
@@ -47,9 +47,9 @@ defmodule JsonOnlyAppTest do
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
                  "version" => @airbrake_client_version
                },
-               "params" => "nil",
-               "session" => "nil"
-             } = payload |> Map.from_struct() |> :json.encode() |> IO.iodata_to_binary() |> :json.decode()
+               "params" => :null,
+               "session" => :null
+             } = payload |> Map.from_struct() |> Airbrake.JsonPayloadProcessor.encode!() |> :json.decode()
     end
 
     test "with all options" do
@@ -78,7 +78,7 @@ defmodule JsonOnlyAppTest do
                )
 
       assert %{
-               "apiKey" => "nil",
+               "apiKey" => :null,
                "context" => %{"environment" => _, "hostname" => _, "foo" => 5},
                "environment" => %{"foo" => 5555},
                "errors" => [
@@ -98,7 +98,7 @@ defmodule JsonOnlyAppTest do
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}
-             } = payload |> Map.from_struct() |> :json.encode() |> IO.iodata_to_binary() |> :json.decode()
+             } = payload |> Map.from_struct() |> Airbrake.JsonPayloadProcessor.encode!() |> :json.decode()
     end
   end
 end

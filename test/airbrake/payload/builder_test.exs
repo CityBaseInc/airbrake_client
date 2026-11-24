@@ -7,6 +7,11 @@ defmodule Airbrake.Payload.BuilderTest do
 
   alias Airbrake.Payload.Builder
 
+  defmodule User do
+    @moduledoc false
+    defstruct [:name, :password]
+  end
+
   setup :set_mox_from_context
   setup :verify_on_exit!
 
@@ -23,6 +28,14 @@ defmodule Airbrake.Payload.BuilderTest do
         assert Builder.build(:context, opts) ==
                  %{environment: context_environment, hostname: hostname}
       end
+    end
+
+    test "builds default/initial context if :context is nil" do
+      MockConfig
+      |> stub(:context_environment, fn -> "prod" end)
+      |> stub(:hostname, fn -> "web-1" end)
+
+      assert Builder.build(:context, config: MockConfig, context: nil) == %{environment: "prod", hostname: "web-1"}
     end
 
     property "can add more context" do
@@ -229,7 +242,8 @@ defmodule Airbrake.Payload.BuilderTest do
 
       check all logger_metadata <- keyword_of(string(:alphanumeric)),
                 session <- map_of(string_key(), string(:alphanumeric)),
-                logger_metadata != [] or session != %{} do
+                logger_metadata != [] or session != %{},
+                not Enum.any?(logger_metadata, fn {key, _} -> Map.has_key?(session, Atom.to_string(key)) end) do
         opts = [
           config: MockConfig,
           logger_metadata: logger_metadata,
@@ -237,12 +251,42 @@ defmodule Airbrake.Payload.BuilderTest do
         ]
 
         assert Builder.build(:session, opts) ==
-                 Map.merge(Map.new(logger_metadata), session)
+                 logger_metadata |> Map.new(fn {key, value} -> {Atom.to_string(key), value} end) |> Map.merge(session)
       end
     end
 
-    defp session_includes_metadata do
+    test "returns logger metadata if :session is nil" do
+      session_includes_metadata()
+
+      opts = [
+        config: MockConfig,
+        logger_metadata: [request_id: "abc123"],
+        session: nil
+      ]
+
+      assert Builder.build(:session, opts) == %{"request_id" => "abc123"}
+    end
+
+    test "filters logger metadata and :session" do
+      session_includes_metadata(["email", "token"])
+
+      opts = [
+        config: MockConfig,
+        logger_metadata: [email: "alice@example.com", request_id: "abc123"],
+        session: %{"token" => "secret", "user_id" => 42}
+      ]
+
+      assert Builder.build(:session, opts) == %{
+               "email" => "[FILTERED]",
+               "request_id" => "abc123",
+               "token" => "[FILTERED]",
+               "user_id" => 42
+             }
+    end
+
+    defp session_includes_metadata(filter_parameters \\ []) do
       stub(MockConfig, :get, fn :session -> :include_logger_metadata end)
+      stub_session_processing(filter_parameters)
     end
   end
 
@@ -276,9 +320,52 @@ defmodule Airbrake.Payload.BuilderTest do
       end
     end
 
-    defp session_does_not_includes_metadata do
-      stub(MockConfig, :get, fn :session -> nil end)
+    test "nil if :session is nil" do
+      session_does_not_includes_metadata()
+
+      assert Builder.build(:session, config: MockConfig, session: nil) == nil
     end
+
+    test "destructures structs, filters, and converts tuples to lists" do
+      session_does_not_includes_metadata(["password"])
+
+      opts = [
+        config: MockConfig,
+        session: %{current_user: %User{name: "Alice", password: "secret"}, position: {1, 2}}
+      ]
+
+      assert Builder.build(:session, opts) == %{
+               "current_user" => %{"name" => "Alice", "password" => "[FILTERED]"},
+               "position" => [1, 2]
+             }
+    end
+
+    test "uses the configured payload processor" do
+      session_does_not_includes_metadata()
+      stub(MockConfig, :get, fn :filter_parameters, _ -> ["password"] end)
+      stub(MockConfig, :payload_processor, fn -> Airbrake.MockPayloadProcessor end)
+
+      expect(Airbrake.MockPayloadProcessor, :process_params, fn session, opts ->
+        assert session == %{"password" => "secret"}
+        assert opts == [filtered_attributes: ["password"]]
+        {:processed, "from MockPayloadProcessor"}
+      end)
+
+      opts = [config: MockConfig, session: %{"password" => "secret"}]
+
+      assert Builder.build(:session, opts) == {:processed, "from MockPayloadProcessor"}
+    end
+
+    defp session_does_not_includes_metadata(filter_parameters \\ []) do
+      stub(MockConfig, :get, fn :session -> nil end)
+      stub_session_processing(filter_parameters)
+    end
+  end
+
+  defp stub_session_processing(filter_parameters) do
+    MockConfig
+    |> stub(:get, fn :filter_parameters, _ -> filter_parameters end)
+    |> stub(:payload_processor, fn -> Airbrake.JsonPayloadProcessor end)
   end
 
   describe "filter_environment/2 with payload_processor" do

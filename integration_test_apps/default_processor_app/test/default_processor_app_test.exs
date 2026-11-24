@@ -9,7 +9,19 @@ defmodule DefaultProcessorAppTest do
     refute Application.get_env(:airbrake_client, :payload_processor)
   end
 
-  describe "default encoding (Poison)" do
+  test "Jason is undefined" do
+    refute Code.ensure_compiled(Jason) == {:module, Jason}
+  end
+
+  test "Poison is undefined" do
+    refute Code.ensure_compiled(Poison) == {:module, Poison}
+  end
+
+  test "the default payload processor is Airbrake.JsonPayloadProcessor" do
+    assert Airbrake.Config.payload_processor() == Airbrake.JsonPayloadProcessor
+  end
+
+  describe "default encoding" do
     test "with minimal options" do
       exception = [
         type: "SomeAwfulError",
@@ -23,10 +35,11 @@ defmodule DefaultProcessorAppTest do
 
       assert %Payload{} = payload = Payload.new(exception, stacktrace)
 
+      # `:json.decode/1` decodes null as :null.
       assert %{
-               "apiKey" => nil,
+               "apiKey" => :null,
                "context" => %{"environment" => _, "hostname" => _},
-               "environment" => nil,
+               "environment" => :null,
                "errors" => [
                  %{
                    "backtrace" => [
@@ -42,9 +55,9 @@ defmodule DefaultProcessorAppTest do
                  "url" => "https://github.com/CityBaseInc/airbrake_client",
                  "version" => @airbrake_client_version
                },
-               "params" => nil,
-               "session" => nil
-             } = payload |> Poison.encode!() |> Poison.decode!()
+               "params" => :null,
+               "session" => :null
+             } = payload |> encode() |> :json.decode()
     end
 
     test "with all options" do
@@ -73,7 +86,7 @@ defmodule DefaultProcessorAppTest do
                )
 
       assert %{
-               "apiKey" => nil,
+               "apiKey" => :null,
                "context" => %{"environment" => _, "hostname" => _, "foo" => 5},
                "environment" => %{"foo" => 5555},
                "errors" => [
@@ -93,7 +106,9 @@ defmodule DefaultProcessorAppTest do
                },
                "params" => %{"foo" => 55},
                "session" => %{"foo" => 555}
-             } = payload |> Poison.encode!() |> Poison.decode!()
+             } = payload |> encode() |> :json.decode()
     end
   end
+
+  defp encode(payload), do: payload |> Map.from_struct() |> Airbrake.Config.payload_processor().encode!()
 end

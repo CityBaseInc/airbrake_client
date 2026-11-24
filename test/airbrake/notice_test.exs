@@ -1,5 +1,6 @@
 defmodule Airbrake.NoticeTest do
   use ExUnit.Case, async: false
+  use ExUnitProperties
 
   import Airbrake.Test
   import ExUnit.CaptureIO
@@ -57,8 +58,10 @@ defmodule Airbrake.NoticeTest do
         end)
 
       assert result == {:error, :initial_post_failed}
-      assert output =~ "airbrake_client failed to process an error notice"
-      assert output =~ "encode error"
+      assert output =~ "airbrake_client failed to post a notice for RuntimeError"
+      assert output =~ "sending a fallback notice: RuntimeError"
+      refute output =~ "test error"
+      refute output =~ "encode error"
       assert_receive {:airbrake_report, %{payload: @fallback_payload}}, 500
     end
   end
@@ -74,10 +77,31 @@ defmodule Airbrake.NoticeTest do
         end)
 
       assert result == {:error, :initial_post_failed}
-      assert output =~ "airbrake_client failed to process an error notice"
-      assert output =~ "throw"
-      assert output =~ "encode_error"
+      assert output =~ "airbrake_client failed to post a notice for RuntimeError"
+      assert output =~ "sending a fallback notice: throw"
+      refute output =~ "encode_error"
       assert_receive {:airbrake_report, %{payload: @fallback_payload}}, 500
+    end
+  end
+
+  describe "post_notice/3 when payload processing fails" do
+    property "warns with only the types and the arities, whatever the stacktrace" do
+      stub(MockHTTPoison, :post, fn _url, _payload, _headers -> {:ok, %HTTPoison.Response{status_code: 201}} end)
+
+      check all secret <- map(string(:alphanumeric, min_length: 1), &"secret-#{&1}"),
+                stacktrace <- stacktrace(secret),
+                failure <- member_of([:raise, :function_clause, :throw]) do
+        stub(MockPayloadProcessor, :encode!, fn payload -> fail_to_encode(failure, payload, secret) end)
+        exception = [type: "RuntimeError", message: "boom #{secret}"]
+
+        {result, output} =
+          with_io(:stderr, fn -> Airbrake.Notice.post_notice(exception, stacktrace, config: MockConfig) end)
+
+        assert result == {:error, :initial_post_failed}
+        assert output =~ "a notice for RuntimeError"
+        assert output =~ %{raise: "ArgumentError", function_clause: "FunctionClauseError", throw: "throw"}[failure]
+        refute output =~ secret
+      end
     end
   end
 
@@ -118,11 +142,30 @@ defmodule Airbrake.NoticeTest do
         end)
 
       assert result == {:error, :initial_post_failed}
-      assert output =~ "airbrake_client failed to process an error notice"
-      assert output =~ "HTTP adapter error"
+      assert output =~ "airbrake_client failed to post a notice for RuntimeError"
+      assert output =~ "sending a fallback notice: RuntimeError"
+      refute output =~ "HTTP adapter error"
       assert_receive {:airbrake_report, %{payload: @fallback_payload}}, 500
     end
   end
+
+  # The frames of Airbrake.LoggerBackend are strings, and other frames can have args.
+  defp stacktrace(secret) do
+    list_of(
+      one_of([
+        constant("(my_app 0.1.0) lib/my_app.ex:12: MyApp.run/1"),
+        constant({MyApp, :run, [secret], [file: ~c"lib/my_app.ex", line: 12]}),
+        constant({fn -> :ok end, [secret], [file: ~c"lib/my_app.ex", line: 13]})
+      ])
+    )
+  end
+
+  defp fail_to_encode(:raise, _payload, secret), do: raise(ArgumentError, "cannot encode #{secret}")
+  defp fail_to_encode(:function_clause, payload, _secret), do: only_nil(payload)
+  defp fail_to_encode(:throw, _payload, secret), do: throw({:cannot_encode, secret})
+
+  # The args of the FunctionClauseError frame are the payload, which has the secret in its message.
+  defp only_nil(nil), do: ""
 
   defp stub_mock_config(_context) do
     stub(MockConfig, :context_environment, fn -> "test" end)

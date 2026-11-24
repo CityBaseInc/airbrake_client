@@ -2,9 +2,9 @@ defmodule Airbrake.PayloadProcessor do
   @moduledoc """
   Behaviour for encoder-specific payload operations.
 
-  * `process_params/2` is used to process the `params` attribute in an Airbrake
-    notice. It should do two things: filter out sensitive data, and transform
-    the data for JSON encoding with `encode!/1`.
+  * `process_params/2` is used to process the `params` and `session` attributes
+    in an Airbrake notice. It should do two things: filter out sensitive data,
+    and transform the data for JSON encoding with `encode!/1`.
   * `process_headers/2` is used to filter sensitive data from the headers
     included in the `notice.environment` attribute of an Airbrake notice.
   * `encode!/1` is used to encode the entire payload as a JSON string.
@@ -12,8 +12,9 @@ defmodule Airbrake.PayloadProcessor do
   Three implementations are provided:
   * `Airbrake.JasonPayloadProcessor` for the [`jason`
     library](https://hex.pm/packages/jason).
-  * `Airbrake.JsonPayloadProcessor` for [`:json` provided in Erlang
-    27+](https://www.erlang.org/doc/apps/stdlib/json.html).
+  * `Airbrake.JsonPayloadProcessor` for `JSON` in Elixir 1.18+, or for
+    [`:json`](https://www.erlang.org/doc/apps/stdlib/json.html) in Erlang/OTP
+    27+ with Elixir 1.17. It needs no other library.
   * `Airbrake.PoisonPayloadProcessor` for the [`poison`
     library](https://hex.pm/packages/poison).
 
@@ -61,8 +62,12 @@ defmodule Airbrake.PayloadProcessor do
   """
 
   @doc """
-  Processes the params payload: transforms Elixir terms into JSON-encodable
-  forms and filters sensitive data.
+  Processes the params or the session of a notice: transforms Elixir terms into
+  JSON-encodable forms and filters sensitive data.
+
+  It is called once for the params and once for the session, with the
+  `:filter_parameters` config option as `:filtered_attributes` both times. It is
+  not called for a session that is empty.
 
   The provided implementations destructure structs, filter sensitive keys,
   and convert tuples to lists.

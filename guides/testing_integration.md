@@ -72,6 +72,7 @@ Use the keys from your own `:filter_parameters` and `:filter_headers` config:
 Airbrake.report(
   [type: "IntegrationTest", message: "filtering"],
   params: %{"password" => "not a real password", "user" => "alice"},
+  session: %{"password" => "session password!"},
   env: %{headers: %{"authorization" => "Bearer not-a-real-token", "accept" => "text/html"}}
 )
 ```

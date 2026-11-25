@@ -39,7 +39,7 @@ defmodule Airbrake.Mixfile do
     [
       contributors: ["Jeremy D. Frens", "Clifton McIntosh", "Roman Smirnov"],
       maintainers: ["Euna Payments"],
-      licenses: ["LGPL"],
+      licenses: ["LGPL-3.0-or-later"],
       links: %{github: "https://github.com/CityBaseInc/airbrake_client"}
     ]
   end
